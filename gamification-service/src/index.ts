@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { ProgressRepository } from './infrastructure/repositories/ProgressRepository';
 import { AvatarRepository } from './infrastructure/repositories/AvatarRepository';
+import { GamificationRepository } from './infrastructure/repositories/GamificationRepository';
 import { AvatarService } from './application/avatarService';
 import { GamificationService } from './application/gamificationService';
 import { createGamificationController, createAvatarController } from './infrastructure/http/controllers';
@@ -13,18 +14,21 @@ app.use(express.json());
 
 const progressRepo = new ProgressRepository();
 const avatarRepo = new AvatarRepository();
+const gamificationRepo = new GamificationRepository();
 const avatarService = new AvatarService(avatarRepo);
-const gamificationService = new GamificationService(progressRepo, avatarService);
+const gamificationService = new GamificationService(progressRepo, avatarService, gamificationRepo);
 
 const gamificationController = createGamificationController(gamificationService);
 const avatarController = createAvatarController(avatarService);
 
-// --- XP / progreso ---
 app.post('/xp/atomic', authMiddleware, gamificationController.addXpAtomic);
-app.get('/xp/progreso/:userId', gamificationController.getProgreso); // sin auth, según la doc de la API
-app.get('/gamificacion/progreso/:userId', authMiddleware, gamificationController.getProgreso); // alias legacy
+app.get('/xp/progreso/:userId', gamificationController.getProgreso);
+app.get('/gamificacion/progreso/:userId', authMiddleware, gamificationController.getProgreso);
 
-// --- Robot / avatar (antes robot-service, ahora mismo proceso) ---
+app.post('/gamification/xp/award', authMiddleware, gamificationController.awardXp);
+
+app.get('/gamification/robot/:userId', authMiddleware, gamificationController.getRobotStatus);
+
 app.post('/robot/evento', authMiddleware, avatarController.procesarEvento);
 app.get('/robot/estado/:userId', authMiddleware, avatarController.getEstado);
 app.get('/robot', authMiddleware, avatarController.getAvatar);

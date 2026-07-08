@@ -4,7 +4,7 @@ import { AvatarService } from '../../application/avatarService';
 
 function handleError(res: Response, error: any, defaultMensaje: string) {
   if (error.name === 'ZodError') {
-    res.status(400).json({ mensaje: 'Datos inválidos', errores: error.issues || error.errors });
+    res.status(400).json({ mensaje: 'Datos invalidos', errores: error.issues || error.errors });
     return;
   }
   if (error.statusCode) {
@@ -40,6 +40,24 @@ export function createGamificationController(service: GamificationService) {
         });
       } catch (err: any) {
         handleError(res, err, 'Error al obtener progreso');
+      }
+    },
+
+    awardXp: async (req: Request, res: Response) => {
+      try {
+        const result = await service.processTaskCompletion(req.body);
+        res.status(200).json(result);
+      } catch (err: any) {
+        handleError(res, err, 'Error al otorgar XP por tarea completada');
+      }
+    },
+
+    getRobotStatus: async (req: Request, res: Response) => {
+      try {
+        const status = await service.getRobotStatus(req.params.userId);
+        res.status(200).json(status);
+      } catch (err: any) {
+        handleError(res, err, 'Error al obtener estado del robot');
       }
     },
   };
