@@ -7,6 +7,7 @@ import { TaskService } from './application/taskService';
 import { createTaskController } from './infrastructure/http/controllers';
 import { authMiddleware } from './infrastructure/http/authMiddleware';
 import { uploadMiddleware } from './infrastructure/http/upload';
+import { iniciarCronTareasVencidas } from './infrastructure/cron/TaskCron';
 
 const app = express();
 app.use(cors());
@@ -38,6 +39,8 @@ router.post('/:id/evidencia', authMiddleware, (req, res, next) => {
 app.use('/tareas', router);
 
 app.get('/health', (_req, res) => res.status(200).json({ status: 'ok', service: 'task-service' }));
+
+iniciarCronTareasVencidas(taskService);
 
 const PORT = Number(process.env.PORT) || 3002;
 app.listen(PORT, () => {

@@ -7,9 +7,10 @@ const GAMIFICATION_SERVICE_URL =
   process.env.GAMIFICATION_SERVICE_URL || 'http://gamification-service:3003';
 
 export const createTaskSchema = z.object({
-  titulo: z.string().min(1, 'El título es requerido'),
+  titulo: z.string().min(1, 'El titulo es requerido'),
   descripcion: z.string().optional(),
-  xpValor: z.number().int().positive('xpValor debe ser un número positivo'),
+  xpValor: z.number().int().positive('xpValor debe ser un numero positivo'),
+  fechaVencimiento: z.string().optional(),
 });
 
 export const updateTaskSchema = createTaskSchema.partial();
@@ -62,7 +63,7 @@ export class TaskService {
       throw Object.assign(new Error('No tienes permiso para modificar esta tarea'), { statusCode: 403 });
     }
     if (tarea.estado === 'completed') {
-      throw Object.assign(new Error('La tarea ya está completada'), { statusCode: 409 });
+      throw Object.assign(new Error('La tarea ya esta completada'), { statusCode: 409 });
     }
 
     const response = await fetch(`${GAMIFICATION_SERVICE_URL}/xp/atomic`, {
@@ -74,7 +75,7 @@ export class TaskService {
     if (!response.ok) {
       const errorBody = await response.text();
       throw Object.assign(
-        new Error(`No se pudo sumar el XP (gamification-service respondió ${response.status}): ${errorBody}`),
+        new Error(`No se pudo sumar el XP (gamification-service respondio ${response.status}): ${errorBody}`),
         { statusCode: 502 },
       );
     }
@@ -133,5 +134,13 @@ export class TaskService {
     }
 
     return { estado: nuevoEstado, url: urlEvidencia, validacion: validation };
+  }
+
+  async processOverdueTasks(): Promise<number> {
+    const actualizadas = await this.repo.marcarTareasVencidas();
+    if (actualizadas > 0) {
+      console.log(`[TaskCron] ${actualizadas} tareas marcadas como vencidas`);
+    }
+    return actualizadas;
   }
 }

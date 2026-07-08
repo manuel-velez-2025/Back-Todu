@@ -10,10 +10,12 @@ export interface Tarea {
   proofReason: string | null;
   proofConfidence: string | null;
   fechaCreacion: Date;
+  fechaVencimiento: Date | null;
 }
 
 export interface CreateTaskDTO {
   titulo: string;
   descripcion?: string;
   xpValor: number;
+  fechaVencimiento?: string;
 }

@@ -14,15 +14,16 @@ function rowToTarea(row: any): Tarea {
     proofReason: row.proof_reason,
     proofConfidence: row.proof_confidence,
     fechaCreacion: row.fecha_creacion,
+    fechaVencimiento: row.fecha_vencimiento ?? null,
   };
 }
 
 export class TaskRepository {
   async create(usuarioId: string, data: CreateTaskDTO): Promise<Tarea> {
     const { rows } = await pool.query(
-      `INSERT INTO tareas (usuario_id, titulo, descripcion, xp_valor, estado)
-       VALUES ($1, $2, $3, $4, 'pending') RETURNING *`,
-      [usuarioId, data.titulo, data.descripcion ?? null, data.xpValor],
+      `INSERT INTO tareas (usuario_id, titulo, descripcion, xp_valor, estado, fecha_vencimiento)
+       VALUES ($1, $2, $3, $4, 'pending', $5) RETURNING *`,
+      [usuarioId, data.titulo, data.descripcion ?? null, data.xpValor, data.fechaVencimiento ?? null],
     );
     return rowToTarea(rows[0]);
   }
@@ -45,9 +46,10 @@ export class TaskRepository {
       `UPDATE tareas SET
          titulo = COALESCE($2, titulo),
          descripcion = COALESCE($3, descripcion),
-         xp_valor = COALESCE($4, xp_valor)
+         xp_valor = COALESCE($4, xp_valor),
+         fecha_vencimiento = COALESCE($5, fecha_vencimiento)
        WHERE id = $1 RETURNING *`,
-      [id, data.titulo ?? null, data.descripcion ?? null, data.xpValor ?? null],
+      [id, data.titulo ?? null, data.descripcion ?? null, data.xpValor ?? null, data.fechaVencimiento ?? null],
     );
     return rowToTarea(rows[0]);
   }
@@ -78,8 +80,6 @@ export class TaskRepository {
 
   }
 
-  /** Guarda cada intento de evidencia en el historial (INNER JOIN
-   * de vista_tareas_con_evidencia usa esta tabla). */
   async registrarIntentoEvidencia(
     tareaId: string,
     data: { urlEvidencia: string; approved: boolean; reason: string; confidence: string },
@@ -89,5 +89,16 @@ export class TaskRepository {
        VALUES ($1, $2, $3, $4, $5)`,
       [tareaId, data.urlEvidencia, data.approved, data.reason, data.confidence],
     );
+  }
+
+  async marcarTareasVencidas(): Promise<number> {
+    const { rowCount } = await pool.query(
+      `UPDATE tareas
+       SET estado = 'vencida'
+       WHERE estado = 'pending'
+         AND fecha_vencimiento IS NOT NULL
+         AND fecha_vencimiento < NOW()`,
+    );
+    return rowCount ?? 0;
   }
 }
