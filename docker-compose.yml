@@ -1,0 +1,121 @@
+version: '3.9'
+
+services:
+  # ============================================================
+  # Bases de datos (una por servicio con estado — geo-service no
+  # necesita BD propia, solo llama a Google Places)
+  # ============================================================
+  db-users:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: db_users
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db-users-data:/var/lib/postgresql/data
+      - ./user-service/migrations:/docker-entrypoint-initdb.d
+    ports:
+      - '5433:5432'
+
+  db-tasks:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: db_tasks
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db-tasks-data:/var/lib/postgresql/data
+      - ./task-service/migrations:/docker-entrypoint-initdb.d
+    ports:
+      - '5434:5432'
+
+  db-gamification:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: db_gamification
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db-gamification-data:/var/lib/postgresql/data
+      - ./gamification-service/migrations:/docker-entrypoint-initdb.d
+    ports:
+      - '5435:5432'
+
+  # ============================================================
+  # Microservicios
+  # ============================================================
+  user-service:
+    build: ./user-service
+    restart: unless-stopped
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgres://postgres:postgres@db-users:5432/db_users
+      JWT_SECRET: ${JWT_SECRET:-cambia-esto-en-produccion}
+    depends_on:
+      - db-users
+    ports:
+      - '3001:3001'
+
+  task-service:
+    build: ./task-service
+    restart: unless-stopped
+    environment:
+      PORT: 3002
+      DATABASE_URL: postgres://postgres:postgres@db-tasks:5432/db_tasks
+      JWT_SECRET: ${JWT_SECRET:-cambia-esto-en-produccion}
+      GAMIFICATION_SERVICE_URL: http://gamification-service:3003
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CLOUDINARY_URL: ${CLOUDINARY_URL:-}
+    depends_on:
+      - db-tasks
+      - gamification-service
+    ports:
+      - '3002:3002'
+
+  gamification-service:
+    build: ./gamification-service
+    restart: unless-stopped
+    environment:
+      PORT: 3003
+      DATABASE_URL: postgres://postgres:postgres@db-gamification:5432/db_gamification
+      JWT_SECRET: ${JWT_SECRET:-cambia-esto-en-produccion}
+    depends_on:
+      - db-gamification
+    ports:
+      - '3003:3003'
+
+  geo-service:
+    build: ./geo-service
+    restart: unless-stopped
+    environment:
+      PORT: 3005
+      GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    ports:
+      - '3005:3005'
+
+  api-gateway:
+    build: ./api-gateway
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET:-cambia-esto-en-produccion}
+      USER_SERVICE_URL: http://user-service:3001
+      TASK_SERVICE_URL: http://task-service:3002
+      GAMIFICATION_SERVICE_URL: http://gamification-service:3003
+      GEO_SERVICE_URL: http://geo-service:3005
+    depends_on:
+      - user-service
+      - task-service
+      - gamification-service
+      - geo-service
+    ports:
+      - '3000:3000'
+
+volumes:
+  db-users-data:
+  db-tasks-data:
+  db-gamification-data:
