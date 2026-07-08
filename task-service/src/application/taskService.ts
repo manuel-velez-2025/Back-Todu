@@ -2,14 +2,13 @@ import { z } from 'zod';
 import { TaskRepository } from '../infrastructure/repositories/TaskRepository';
 import { ClaudeVisionAdapter } from '../infrastructure/external/claudeVisionAdapter';
 import { IStorageProvider } from '../domain/interfaces/IStorageProvider';
-
-const GAMIFICATION_SERVICE_URL =
-  process.env.GAMIFICATION_SERVICE_URL || 'http://gamification-service:3003';
+import type { IGamificationClient } from './ports/IGamificationClient';
 
 export const createTaskSchema = z.object({
   titulo: z.string().min(1, 'El titulo es requerido'),
   descripcion: z.string().optional(),
   xpValor: z.number().int().positive('xpValor debe ser un numero positivo'),
+  dificultad: z.enum(['easy', 'medium', 'hard']).optional(),
   fechaVencimiento: z.string().optional(),
 });
 
@@ -20,6 +19,7 @@ export class TaskService {
     private repo: TaskRepository,
     private vision?: ClaudeVisionAdapter,
     private storageProvider?: IStorageProvider,
+    private gamificationClient?: IGamificationClient,
   ) {}
 
   async createTask(usuarioId: string, data: unknown) {
@@ -66,21 +66,21 @@ export class TaskService {
       throw Object.assign(new Error('La tarea ya esta completada'), { statusCode: 409 });
     }
 
-    const response = await fetch(`${GAMIFICATION_SERVICE_URL}/xp/atomic`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: tarea.usuarioId, xp: tarea.xpValor, evento: 'TASK_COMPLETED' }),
-    });
+    const result = await this.repo.markCompleted(taskId);
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw Object.assign(
-        new Error(`No se pudo sumar el XP (gamification-service respondio ${response.status}): ${errorBody}`),
-        { statusCode: 502 },
-      );
+    if (this.gamificationClient) {
+      try {
+        await this.gamificationClient.awardXp({
+          userId: tarea.usuarioId,
+          taskDifficulty: tarea.dificultad,
+          evento: 'TASK_COMPLETED',
+        });
+      } catch (err) {
+        console.error('Error al notificar a gamification-service tras completar tarea:', err);
+      }
     }
 
-    return this.repo.markCompleted(taskId);
+    return result;
   }
 
   async submitEvidence(taskId: string, userId: string, file: Express.Multer.File) {
@@ -121,12 +121,12 @@ export class TaskService {
       confidence: validation.confidence,
     });
 
-    if (validation.approved) {
+    if (validation.approved && this.gamificationClient) {
       try {
-        await fetch(`${GAMIFICATION_SERVICE_URL}/xp/atomic`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: tarea.usuarioId, xp: tarea.xpValor, evento: 'TASK_COMPLETED' }),
+        await this.gamificationClient.awardXp({
+          userId: tarea.usuarioId,
+          taskDifficulty: tarea.dificultad,
+          evento: 'TASK_COMPLETED',
         });
       } catch (err) {
         console.error('Error al notificar a gamification-service tras evidencia aprobada:', err);

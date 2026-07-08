@@ -8,6 +8,7 @@ function rowToTarea(row: any): Tarea {
     titulo: row.titulo,
     descripcion: row.descripcion,
     xpValor: row.xp_valor,
+    dificultad: row.dificultad ?? 'easy',
     estado: row.estado,
     urlEvidencia: row.url_evidencia,
     proofStatus: row.proof_status,
@@ -21,9 +22,9 @@ function rowToTarea(row: any): Tarea {
 export class TaskRepository {
   async create(usuarioId: string, data: CreateTaskDTO): Promise<Tarea> {
     const { rows } = await pool.query(
-      `INSERT INTO tareas (usuario_id, titulo, descripcion, xp_valor, estado, fecha_vencimiento)
-       VALUES ($1, $2, $3, $4, 'pending', $5) RETURNING *`,
-      [usuarioId, data.titulo, data.descripcion ?? null, data.xpValor, data.fechaVencimiento ?? null],
+      `INSERT INTO tareas (usuario_id, titulo, descripcion, xp_valor, dificultad, estado, fecha_vencimiento)
+       VALUES ($1, $2, $3, $4, $5, 'pending', $6) RETURNING *`,
+      [usuarioId, data.titulo, data.descripcion ?? null, data.xpValor, data.dificultad ?? 'easy', data.fechaVencimiento ?? null],
     );
     return rowToTarea(rows[0]);
   }
@@ -47,9 +48,10 @@ export class TaskRepository {
          titulo = COALESCE($2, titulo),
          descripcion = COALESCE($3, descripcion),
          xp_valor = COALESCE($4, xp_valor),
-         fecha_vencimiento = COALESCE($5, fecha_vencimiento)
+         dificultad = COALESCE($5, dificultad),
+         fecha_vencimiento = COALESCE($6, fecha_vencimiento)
        WHERE id = $1 RETURNING *`,
-      [id, data.titulo ?? null, data.descripcion ?? null, data.xpValor ?? null, data.fechaVencimiento ?? null],
+      [id, data.titulo ?? null, data.descripcion ?? null, data.xpValor ?? null, data.dificultad ?? null, data.fechaVencimiento ?? null],
     );
     return rowToTarea(rows[0]);
   }

@@ -4,6 +4,7 @@ export interface Tarea {
   titulo: string;
   descripcion: string | null;
   xpValor: number;
+  dificultad: 'easy' | 'medium' | 'hard';
   estado: 'pending' | 'completed' | 'rejected' | 'vencida';
   urlEvidencia: string | null;
   proofStatus: string | null;
@@ -17,5 +18,8 @@ export interface CreateTaskDTO {
   titulo: string;
   descripcion?: string;
   xpValor: number;
+  dificultad?: 'easy' | 'medium' | 'hard';
   fechaVencimiento?: string;
 }
+
+export type TaskDifficulty = 'easy' | 'medium' | 'hard';

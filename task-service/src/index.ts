@@ -8,6 +8,7 @@ import { createTaskController } from './infrastructure/http/controllers';
 import { authMiddleware } from './infrastructure/http/authMiddleware';
 import { uploadMiddleware } from './infrastructure/http/upload';
 import { iniciarCronTareasVencidas } from './infrastructure/cron/TaskCron';
+import { GamificationClient } from './infrastructure/http/GamificationClient';
 
 const app = express();
 app.use(cors());
@@ -16,7 +17,8 @@ app.use(express.json());
 const repo = new TaskRepository();
 const vision = new ClaudeVisionAdapter();
 const storageProvider = new CloudinaryAdapter();
-const taskService = new TaskService(repo, vision, storageProvider);
+const gamificationClient = new GamificationClient();
+const taskService = new TaskService(repo, vision, storageProvider, gamificationClient);
 const controller = createTaskController(taskService);
 
 const router = express.Router();
