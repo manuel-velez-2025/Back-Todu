@@ -6,6 +6,7 @@ import { PlaceSummaryRepository } from './infrastructure/repositories/PlaceSumma
 import { GeoService } from './application/geoService';
 import { createGeoController } from './infrastructure/http/controllers';
 import { authMiddleware } from './infrastructure/http/authMiddleware';
+import { GamificationClient } from './infrastructure/http/GamificationClient';
 
 const app = express();
 app.use(cors());
@@ -15,7 +16,8 @@ const placesApi = new GooglePlacesAdapter();
 const tipGenerator = new ClaudeTipAdapter();
 const placeSummaryRepo = new PlaceSummaryRepository();
 const service = new GeoService(placesApi, tipGenerator, placeSummaryRepo);
-const controller = createGeoController(service);
+const gamificationClient = new GamificationClient();
+const controller = createGeoController(service, gamificationClient);
 
 app.get('/geo/cercanos', authMiddleware, controller.cercanos);
 
