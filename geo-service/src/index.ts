@@ -1,7 +1,8 @@
 import express from 'express';
 import cors from 'cors';
-import { GooglePlacesAdapter } from './infrastructure/external/googlePlacesAdapter';
-import { ClaudeTipAdapter } from './infrastructure/external/claudeTipAdapter';
+import { GooglePlacesAdapter } from './infrastructure/external/GooglePlacesAdapter';
+import { ClaudeTipAdapter } from './infrastructure/external/ClaudeTipAdapter';
+import { PlaceSummaryRepository } from './infrastructure/repositories/PlaceSummaryRepository';
 import { GeoService } from './application/geoService';
 import { createGeoController } from './infrastructure/http/controllers';
 import { authMiddleware } from './infrastructure/http/authMiddleware';
@@ -10,7 +11,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const service = new GeoService(new GooglePlacesAdapter(), new ClaudeTipAdapter());
+const placesApi = new GooglePlacesAdapter();
+const tipGenerator = new ClaudeTipAdapter();
+const placeSummaryRepo = new PlaceSummaryRepository();
+const service = new GeoService(placesApi, tipGenerator, placeSummaryRepo);
 const controller = createGeoController(service);
 
 app.get('/geo/cercanos', authMiddleware, controller.cercanos);

@@ -1,6 +1,19 @@
 import { Request, Response } from 'express';
 import { GeoService } from '../../application/geoService';
 
+function handleError(res: Response, error: any, defaultMensaje: string) {
+  if (error.name === 'ZodError') {
+    res.status(400).json({ mensaje: 'Datos invalidos', errores: error.issues || error.errors });
+    return;
+  }
+  if (error.statusCode) {
+    res.status(error.statusCode).json({ mensaje: error.message });
+    return;
+  }
+  console.error(defaultMensaje, error);
+  res.status(500).json({ mensaje: defaultMensaje });
+}
+
 export function createGeoController(service: GeoService) {
   return {
     cercanos: async (req: Request, res: Response) => {
@@ -8,16 +21,7 @@ export function createGeoController(service: GeoService) {
         const result = await service.buscarCercanos(req.query);
         res.status(200).json(result);
       } catch (err: any) {
-        if (err.name === 'ZodError') {
-          res.status(400).json({ mensaje: 'Datos inválidos', errores: err.issues || err.errors });
-          return;
-        }
-        if (err.statusCode) {
-          res.status(err.statusCode).json({ mensaje: err.message });
-          return;
-        }
-        console.error('Error al buscar lugares cercanos:', err);
-        res.status(500).json({ mensaje: 'Error al buscar lugares cercanos' });
+        handleError(res, err, 'Error al buscar lugares cercanos');
       }
     },
   };

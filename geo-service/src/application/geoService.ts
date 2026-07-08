@@ -1,6 +1,8 @@
 import { z } from 'zod';
-import { GooglePlacesAdapter } from '../infrastructure/external/googlePlacesAdapter';
-import { ClaudeTipAdapter } from '../infrastructure/external/claudeTipAdapter';
+import type { Place } from '../domain/geo';
+import type { ITipGenerator } from './ports/ITipGenerator';
+import type { IPlaceSummaryRepository } from './ports/IPlaceSummaryRepository';
+import type { IPlacesApi } from './ports/IPlacesApi';
 
 export const cercanosQuerySchema = z.object({
   lat: z.coerce.number(),
@@ -12,22 +14,20 @@ export const cercanosQuerySchema = z.object({
 
 export class GeoService {
   constructor(
-    private places: GooglePlacesAdapter,
-    private tips: ClaudeTipAdapter,
+    private placesApi: IPlacesApi,
+    private tipGenerator: ITipGenerator,
+    private placeSummaryRepo: IPlaceSummaryRepository,
   ) {}
 
   async buscarCercanos(query: unknown) {
     const parsed = cercanosQuerySchema.parse(query);
-    const resultados = await this.places.buscarCercanos(parsed);
+    const resultados = await this.placesApi.buscarCercanos(parsed);
 
-    // Genera el tip de IA en paralelo para cada lugar (cacheado por
-    // place_id — ver ClaudeTipAdapter). Si Anthropic no está
-    // configurado, "tip" simplemente viene como null.
     const conTips = await Promise.all(
-      resultados.map(async (place) => ({
-        ...place,
-        tip: await this.tips.generarTip(place),
-      })),
+      resultados.map(async (place) => {
+        const tip = await this.obtenerTipConCache(place);
+        return { ...place, tip };
+      }),
     );
 
     return {
@@ -35,5 +35,36 @@ export class GeoService {
       totalResults: conTips.length,
       query: { lat: parsed.lat, lng: parsed.lng },
     };
+  }
+
+  private async obtenerTipConCache(place: Place): Promise<string> {
+    const cached = await this.placeSummaryRepo.findByPlaceId(place.id);
+    if (cached) {
+      return cached.tip;
+    }
+
+    const tip = await this.tipGenerator.generarTip(
+      place.id,
+      place.name,
+      place.types,
+      place.rating,
+      place.userRatingsTotal,
+    );
+
+    this.placeSummaryRepo.upsert({
+      placeId: place.id,
+      name: place.name,
+      address: place.address,
+      rating: place.rating,
+      userRatingsTotal: place.userRatingsTotal,
+      types: place.types,
+      tip,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }).catch((err) => {
+      console.error('Error al guardar tip en cache para', place.id, err);
+    });
+
+    return tip;
   }
 }
