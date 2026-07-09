@@ -1,6 +1,6 @@
 export interface AwardXpPayload {
   userId: string;
-  taskDifficulty: 'easy' | 'medium' | 'hard';
+  xp: number;
   evento?: string;
 }
 

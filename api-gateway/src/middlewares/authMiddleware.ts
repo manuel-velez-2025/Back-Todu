@@ -26,11 +26,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
       email: string;
     };
     req.user = { id: payload.sub, email: payload.email };
-    // Se reenvían como headers hacia los microservicios río abajo,
-    // por si alguno los necesita sin tener que decodificar el JWT
-    // de nuevo (user-service, task-service y gamification-service
-    // sí lo decodifican por su cuenta, pero esto queda disponible
-    // igual para quien lo prefiera).
+
     req.headers['x-user-id'] = payload.sub;
     req.headers['x-user-email'] = payload.email;
     next();

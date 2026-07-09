@@ -24,6 +24,7 @@ const controller = createTaskController(taskService);
 const router = express.Router();
 router.post('/', authMiddleware, controller.crearTarea);
 router.get('/mis-tareas', authMiddleware, controller.misTareas);
+router.get('/reporte/evidencias', authMiddleware, controller.reporteEvidencias);
 router.get('/:id', authMiddleware, controller.obtenerTareaPorId);
 router.put('/:id', authMiddleware, controller.actualizarTarea);
 router.delete('/:id', authMiddleware, controller.borrarTarea);

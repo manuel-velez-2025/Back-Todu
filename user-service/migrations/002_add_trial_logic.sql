@@ -1,3 +1,5 @@
+SET search_path TO users, public;
+
 CREATE OR REPLACE FUNCTION dias_restantes_prueba(p_fecha_registro TIMESTAMPTZ)
 RETURNS INTEGER AS $$
 DECLARE

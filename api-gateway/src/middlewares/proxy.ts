@@ -1,18 +1,6 @@
 import { Request, Response } from 'express';
 import axios from 'axios';
 
-/**
- * Reenvía la petición del gateway hacia un microservicio interno.
- *
- * IMPORTANTE (bug real que ya vivimos y costó horas): para
- * peticiones multipart/form-data (subida de archivos, ej. evidencia
- * con foto), `req.body` SIEMPRE llega vacío porque express.json()
- * nunca las parsea. Si se reenvía `req.body` tal cual para esos
- * casos, el archivo se pierde en el camino y nunca llega al
- * microservicio. Por eso aquí se detecta el content-type y, si es
- * multipart, se reenvía el `req` completo como stream crudo en vez
- * del body ya parseado.
- */
 export function proxyTo(baseUrl: string) {
   return async (req: Request, res: Response) => {
     try {

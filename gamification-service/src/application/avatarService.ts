@@ -7,11 +7,6 @@ export const updateAvatarSchema = z.object({
   accessory: z.enum(ACCESORIOS_VALIDOS).optional(),
 });
 
-// Mapa evento → expresión, igual al que documentaba el robot-service
-// original — ahora vive como una función interna en vez de un
-// endpoint HTTP aparte (/robot/evento seguía existiendo, pero ya no
-// hay una llamada de red entre "gamificación" y "robot": es el
-// mismo proceso).
 const EVENTO_A_EMOCION: Record<string, string> = {
   TASK_COMPLETED: 'Happy',
   LEVEL_UP: 'Surprised',
@@ -32,10 +27,6 @@ export class AvatarService {
     return this.repo.upsertEstado(usuarioId, parsed);
   }
 
-  /**
-   * Reacciona a un evento de negocio (llamada internamente desde
-   * GamificationService.sumarXp, no vía HTTP).
-   */
   async reaccionarAEvento(usuarioId: string, evento: string): Promise<string> {
     const expresion = EVENTO_A_EMOCION[evento] || 'Smiling';
     await this.repo.upsertEstado(usuarioId, { expression: expresion });

@@ -27,12 +27,6 @@ export class ProgressRepository {
     return toProgreso(rows[0]);
   }
 
-  /**
-   * Llama al procedimiento almacenado `sumar_xp_atomico` (ver
-   * migrations/001_init.sql) — el bloqueo de fila (FOR UPDATE) y
-   * el cálculo de racha viven en SQL, no en este código, para que
-   * dos peticiones simultáneas nunca se pisen entre sí.
-   */
   async sumarXpAtomico(usuarioId: string, xp: number): Promise<{ xpTotal: number; subioDeNivel: boolean }> {
     const { rows } = await pool.query(
       `CALL sumar_xp_atomico($1, $2, NULL, false)`,

@@ -103,4 +103,11 @@ export class TaskRepository {
     );
     return rowCount ?? 0;
   }
+  async getReporteEvidencias(usuarioId: string) {
+    const { rows } = await pool.query(
+      `SELECT * FROM vista_tareas_con_evidencia WHERE usuario_id = $1 ORDER BY ultimo_intento_fecha DESC`,
+      [usuarioId],
+    );
+    return rows;
+  }
 }

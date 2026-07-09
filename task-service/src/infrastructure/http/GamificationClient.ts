@@ -4,12 +4,12 @@ const GAMIFICATION_BASE_URL = process.env.GAMIFICATION_SERVICE_URL || 'http://ga
 
 export class GamificationClient implements IGamificationClient {
   async awardXp(payload: AwardXpPayload): Promise<void> {
-    const response = await fetch(`${GAMIFICATION_BASE_URL}/gamification/xp/award`, {
+    const response = await fetch(`${GAMIFICATION_BASE_URL}/xp/atomic`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userId: payload.userId,
-        taskDifficulty: payload.taskDifficulty,
+        xp: payload.xp,
         evento: payload.evento ?? 'TASK_COMPLETED',
       }),
     });

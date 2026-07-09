@@ -1,6 +1,11 @@
 -- ============================================================
 -- user-service — Esquema de base de datos
 -- ============================================================
+-- Supabase (plan gratuito) da UNA sola base de datos por proyecto,
+-- no 3 separadas, así que cada servicio vive en su propio ESQUEMA
+-- dentro de esa misma base.
+CREATE SCHEMA IF NOT EXISTS users;
+SET search_path TO users, public;
 
 -- Tabla principal de usuarios
 CREATE TABLE IF NOT EXISTS usuarios (
@@ -46,8 +51,10 @@ CREATE OR REPLACE VIEW vista_inventario_usuario AS
 SELECT
   u.id AS usuario_id,
   u.username,
+  i.id AS item_row_id,
   i.item_id,
-  i.is_equipped
+  i.is_equipped,
+  i.created_at
 FROM usuarios u
 LEFT JOIN inventario i ON i.usuario_id = u.id;
 
@@ -100,12 +107,11 @@ $$;
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'rol_app_todu') THEN
-    CREATE ROLE rol_app_todu LOGIN PASSWORD 'CAMBIAR_EN_PRODUCCION';
+    CREATE ROLE rol_app_todu LOGIN PASSWORD 'CambiaEstaPassword2026';
   END IF;
 END $$;
 
-GRANT CONNECT ON DATABASE db_users TO rol_app_todu;
-GRANT USAGE ON SCHEMA public TO rol_app_todu;
+GRANT USAGE ON SCHEMA users TO rol_app_todu;
 GRANT SELECT, INSERT, UPDATE, DELETE ON usuarios, inventario TO rol_app_todu;
 GRANT SELECT ON vista_inventario_usuario TO rol_app_todu;
 GRANT EXECUTE ON FUNCTION es_mayor_de_edad(DATE) TO rol_app_todu;
@@ -116,10 +122,9 @@ GRANT EXECUTE ON PROCEDURE registrar_usuario(VARCHAR, VARCHAR, TEXT, DATE, UUID)
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'rol_reportes_todu') THEN
-    CREATE ROLE rol_reportes_todu LOGIN PASSWORD 'CAMBIAR_EN_PRODUCCION';
+    CREATE ROLE rol_reportes_todu LOGIN PASSWORD 'CambiaEstaPassword2026';
   END IF;
 END $$;
 
-GRANT CONNECT ON DATABASE db_users TO rol_reportes_todu;
-GRANT USAGE ON SCHEMA public TO rol_reportes_todu;
+GRANT USAGE ON SCHEMA users TO rol_reportes_todu;
 GRANT SELECT ON usuarios, inventario, vista_inventario_usuario TO rol_reportes_todu;

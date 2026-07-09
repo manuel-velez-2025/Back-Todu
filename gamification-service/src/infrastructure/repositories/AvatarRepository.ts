@@ -14,7 +14,7 @@ export class AvatarRepository {
   async getEstado(usuarioId: string): Promise<AvatarEstado> {
     const { rows } = await pool.query('SELECT * FROM avatar_estado WHERE usuario_id = $1', [usuarioId]);
     if (!rows[0]) {
-      // Valores por defecto si el usuario nunca ha personalizado su avatar
+    
       return { usuarioId, expression: 'Smiling', accessory: 'None', updatedAt: new Date() };
     }
     return toAvatar(rows[0]);

@@ -136,12 +136,14 @@ export class UserRepository {
 
   async getInventario(usuarioId: string): Promise<InventoryItem[]> {
     const { rows } = await pool.query(
-      `SELECT id, usuario_id, item_id, is_equipped, created_at
-       FROM inventario WHERE usuario_id = $1 ORDER BY created_at`,
+      `SELECT item_row_id, usuario_id, item_id, is_equipped, created_at
+       FROM vista_inventario_usuario
+       WHERE usuario_id = $1 AND item_id IS NOT NULL
+       ORDER BY created_at`,
       [usuarioId],
     );
     return rows.map((r) => ({
-      id: r.id,
+      id: r.item_row_id,
       usuarioId: r.usuario_id,
       itemId: r.item_id,
       isEquipped: r.is_equipped,

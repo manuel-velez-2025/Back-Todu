@@ -1,9 +1,6 @@
--- ============================================================
--- gamification-service — Esquema de base de datos
--- (incluye lo que antes era robot-service: expresión/accesorio
--- del avatar, ya que ambos módulos se llamaban entre sí en cada
--- evento y hoy viven como llamadas de función internas, no HTTP)
--- ============================================================
+
+CREATE SCHEMA IF NOT EXISTS gamification;
+SET search_path TO gamification, public;
 
 CREATE TABLE IF NOT EXISTS progreso (
   usuario_id UUID PRIMARY KEY,
@@ -14,8 +11,6 @@ CREATE TABLE IF NOT EXISTS progreso (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Estado del avatar (antes en robot-service, hoy es solo otra
--- tabla dentro del mismo servicio de gamificación)
 CREATE TABLE IF NOT EXISTS avatar_estado (
   usuario_id UUID PRIMARY KEY,
   expression VARCHAR(20) NOT NULL DEFAULT 'Smiling',
@@ -25,13 +20,6 @@ CREATE TABLE IF NOT EXISTS avatar_estado (
 
 CREATE INDEX IF NOT EXISTS idx_progreso_usuario_id ON progreso(usuario_id);
 
--- ------------------------------------------------------------
--- FUNCIÓN 2 (la 1a está en user-service): calcula el nivel a
--- partir del XP total, con la misma fórmula que ya usaba el
--- servicio (Nivel = floor(sqrt(XP)/10)) — ahora vive en la BD
--- para poder usarse directo en consultas/reportes, no solo
--- calculada en el código de la aplicación.
--- ------------------------------------------------------------
 CREATE OR REPLACE FUNCTION calcular_nivel(p_xp INTEGER)
 RETURNS INTEGER AS $$
 BEGIN
@@ -39,8 +27,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
--- Vista de progreso legible (usa la función de arriba), práctica
--- para reportes rápidos por SQL directo sin pasar por la app.
 CREATE OR REPLACE VIEW vista_progreso_nivel AS
 SELECT
   usuario_id,
@@ -50,12 +36,6 @@ SELECT
   tareas_completadas
 FROM progreso;
 
--- ------------------------------------------------------------
--- PROCEDIMIENTO 2 (el 1o está en user-service): suma XP de forma
--- atómica con bloqueo de fila (SELECT ... FOR UPDATE), evitando
--- la condición de carrera que antes se manejaba a mano desde
--- TypeScript en dos pasos separados (leer, luego escribir).
--- ------------------------------------------------------------
 CREATE OR REPLACE PROCEDURE sumar_xp_atomico(
   p_usuario_id UUID,
   p_xp INTEGER,
@@ -68,8 +48,7 @@ DECLARE
   v_nivel_anterior INTEGER;
   v_nivel_nuevo INTEGER;
 BEGIN
-  -- Bloquea la fila del usuario hasta que termine esta transacción,
-  -- así dos peticiones simultáneas de XP nunca se pisan entre sí.
+
   INSERT INTO progreso (usuario_id, xp_total, tareas_completadas, ultima_actividad)
   VALUES (p_usuario_id, 0, 0, CURRENT_DATE)
   ON CONFLICT (usuario_id) DO NOTHING;
@@ -94,18 +73,14 @@ BEGIN
 END;
 $$;
 
--- ============================================================
--- Roles
--- ============================================================
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'rol_app_todu') THEN
-    CREATE ROLE rol_app_todu LOGIN PASSWORD 'CAMBIAR_EN_PRODUCCION';
+    CREATE ROLE rol_app_todu LOGIN PASSWORD 'CambiaEstaPassword2026';
   END IF;
 END $$;
 
-GRANT CONNECT ON DATABASE db_gamification TO rol_app_todu;
-GRANT USAGE ON SCHEMA public TO rol_app_todu;
+GRANT USAGE ON SCHEMA gamification TO rol_app_todu;
 GRANT SELECT, INSERT, UPDATE, DELETE ON progreso, avatar_estado TO rol_app_todu;
 GRANT SELECT ON vista_progreso_nivel TO rol_app_todu;
 GRANT EXECUTE ON FUNCTION calcular_nivel(INTEGER) TO rol_app_todu;
@@ -114,10 +89,9 @@ GRANT EXECUTE ON PROCEDURE sumar_xp_atomico(UUID, INTEGER, INTEGER, BOOLEAN) TO 
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'rol_reportes_todu') THEN
-    CREATE ROLE rol_reportes_todu LOGIN PASSWORD 'CAMBIAR_EN_PRODUCCION';
+    CREATE ROLE rol_reportes_todu LOGIN PASSWORD 'CambiaEstaPassword2026';
   END IF;
 END $$;
 
-GRANT CONNECT ON DATABASE db_gamification TO rol_reportes_todu;
-GRANT USAGE ON SCHEMA public TO rol_reportes_todu;
+GRANT USAGE ON SCHEMA gamification TO rol_reportes_todu;
 GRANT SELECT ON progreso, avatar_estado, vista_progreso_nivel TO rol_reportes_todu;

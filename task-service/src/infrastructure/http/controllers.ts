@@ -70,6 +70,15 @@ export function createTaskController(taskService: TaskService) {
       }
     },
 
+    reporteEvidencias: async (req: Request, res: Response) => {
+      try {
+        const reporte = await taskService.getReporteEvidencias(req.user!.id);
+        res.status(200).json({ reporte });
+      } catch (err: any) {
+        handleError(res, err, 'Error al generar reporte de evidencias');
+      }
+    },
+
     subirEvidencia: async (req: Request, res: Response) => {
       try {
         if (!req.file) {

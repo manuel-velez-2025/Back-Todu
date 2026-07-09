@@ -1,6 +1,8 @@
 -- ============================================================
 -- task-service — Esquema de base de datos
 -- ============================================================
+CREATE SCHEMA IF NOT EXISTS tasks;
+SET search_path TO tasks, public;
 
 CREATE TABLE IF NOT EXISTS tareas (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -67,22 +69,20 @@ INNER JOIN (
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'rol_app_todu') THEN
-    CREATE ROLE rol_app_todu LOGIN PASSWORD 'CAMBIAR_EN_PRODUCCION';
+    CREATE ROLE rol_app_todu LOGIN PASSWORD 'CambiaEstaPassword2026';
   END IF;
 END $$;
 
-GRANT CONNECT ON DATABASE db_tasks TO rol_app_todu;
-GRANT USAGE ON SCHEMA public TO rol_app_todu;
+GRANT USAGE ON SCHEMA tasks TO rol_app_todu;
 GRANT SELECT, INSERT, UPDATE, DELETE ON tareas, historial_evidencias TO rol_app_todu;
 GRANT SELECT ON vista_tareas_con_evidencia TO rol_app_todu;
 
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'rol_reportes_todu') THEN
-    CREATE ROLE rol_reportes_todu LOGIN PASSWORD 'CAMBIAR_EN_PRODUCCION';
+    CREATE ROLE rol_reportes_todu LOGIN PASSWORD 'CambiaEstaPassword2026';
   END IF;
 END $$;
 
-GRANT CONNECT ON DATABASE db_tasks TO rol_reportes_todu;
-GRANT USAGE ON SCHEMA public TO rol_reportes_todu;
+GRANT USAGE ON SCHEMA tasks TO rol_reportes_todu;
 GRANT SELECT ON tareas, historial_evidencias, vista_tareas_con_evidencia TO rol_reportes_todu;

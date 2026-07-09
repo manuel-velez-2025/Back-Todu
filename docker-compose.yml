@@ -1,10 +1,6 @@
 version: '3.9'
 
 services:
-  # ============================================================
-  # Bases de datos (una por servicio con estado — geo-service no
-  # necesita BD propia, solo llama a Google Places)
-  # ============================================================
   db-users:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -44,6 +40,19 @@ services:
     ports:
       - '5435:5432'
 
+  db-geo:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: db_geo
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db-geo-data:/var/lib/postgresql/data
+      - ./geo-service/migrations:/docker-entrypoint-initdb.d
+    ports:
+      - '5436:5432'
+
   # ============================================================
   # Microservicios
   # ============================================================
@@ -52,7 +61,8 @@ services:
     restart: unless-stopped
     environment:
       PORT: 3001
-      DATABASE_URL: postgres://postgres:postgres@db-users:5432/db_users
+      DATABASE_URL: postgres://rol_app_todu:CambiaEstaPassword2026@db-users:5432/db_users
+      DB_SCHEMA: users
       JWT_SECRET: ${JWT_SECRET:-cambia-esto-en-produccion}
     depends_on:
       - db-users
@@ -64,7 +74,8 @@ services:
     restart: unless-stopped
     environment:
       PORT: 3002
-      DATABASE_URL: postgres://postgres:postgres@db-tasks:5432/db_tasks
+      DATABASE_URL: postgres://rol_app_todu:CambiaEstaPassword2026@db-tasks:5432/db_tasks
+      DB_SCHEMA: tasks
       JWT_SECRET: ${JWT_SECRET:-cambia-esto-en-produccion}
       GAMIFICATION_SERVICE_URL: http://gamification-service:3003
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
@@ -80,7 +91,8 @@ services:
     restart: unless-stopped
     environment:
       PORT: 3003
-      DATABASE_URL: postgres://postgres:postgres@db-gamification:5432/db_gamification
+      DATABASE_URL: postgres://rol_app_todu:CambiaEstaPassword2026@db-gamification:5432/db_gamification
+      DB_SCHEMA: gamification
       JWT_SECRET: ${JWT_SECRET:-cambia-esto-en-produccion}
     depends_on:
       - db-gamification
@@ -92,8 +104,12 @@ services:
     restart: unless-stopped
     environment:
       PORT: 3005
+      DATABASE_URL: postgres://rol_app_todu:CambiaEstaPassword2026@db-geo:5432/db_geo
+      DB_SCHEMA: geo
       GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    depends_on:
+      - db-geo
     ports:
       - '3005:3005'
 
@@ -119,3 +135,4 @@ volumes:
   db-users-data:
   db-tasks-data:
   db-gamification-data:
+  db-geo-data:

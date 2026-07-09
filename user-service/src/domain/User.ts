@@ -5,10 +5,8 @@ export interface User {
   passwordHash: string | null;
   authProvider: 'email' | 'google';
   googleId: string | null;
-  fechaNacimiento: string; // YYYY-MM-DD
-  xpTotal?: number; // no vive aquí en realidad (vive en gamification-service),
-  // se deja opcional solo por compatibilidad con la forma de respuesta que
-  // ya espera el frontend en /auth/register y /auth/login.
+  fechaNacimiento: string;
+  xpTotal?: number; 
   createdAt: Date;
 }
 

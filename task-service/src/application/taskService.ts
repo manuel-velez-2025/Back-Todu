@@ -65,22 +65,16 @@ export class TaskService {
     if (tarea.estado === 'completed') {
       throw Object.assign(new Error('La tarea ya esta completada'), { statusCode: 409 });
     }
-
-    const result = await this.repo.markCompleted(taskId);
-
+    
     if (this.gamificationClient) {
-      try {
-        await this.gamificationClient.awardXp({
-          userId: tarea.usuarioId,
-          taskDifficulty: tarea.dificultad,
-          evento: 'TASK_COMPLETED',
-        });
-      } catch (err) {
-        console.error('Error al notificar a gamification-service tras completar tarea:', err);
-      }
+      await this.gamificationClient.awardXp({
+        userId: tarea.usuarioId,
+        xp: tarea.xpValor,
+        evento: 'TASK_COMPLETED',
+      });
     }
 
-    return result;
+    return this.repo.markCompleted(taskId);
   }
 
   async submitEvidence(taskId: string, userId: string, file: Express.Multer.File) {
@@ -125,7 +119,7 @@ export class TaskService {
       try {
         await this.gamificationClient.awardXp({
           userId: tarea.usuarioId,
-          taskDifficulty: tarea.dificultad,
+          xp: tarea.xpValor,
           evento: 'TASK_COMPLETED',
         });
       } catch (err) {
@@ -142,5 +136,9 @@ export class TaskService {
       console.log(`[TaskCron] ${actualizadas} tareas marcadas como vencidas`);
     }
     return actualizadas;
+  }
+
+  async getReporteEvidencias(usuarioId: string) {
+    return this.repo.getReporteEvidencias(usuarioId);
   }
 }

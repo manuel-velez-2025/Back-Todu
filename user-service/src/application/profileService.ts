@@ -50,12 +50,7 @@ export class ProfileService {
     const nuevoHash = await bcrypt.hash(parsed.passwordNuevo, 10);
     await this.userRepo.updatePassword(userId, nuevoHash);
   }
-
-  /**
-   * Elimina la cuenta SOLO si la contraseña coincide — este chequeo
-   * es justo el que faltaba en la versión anterior del backend
-   * (borraba la cuenta con solo el JWT, sin confirmar nada).
-   */
+  
   async deleteAccount(userId: string, dto: z.infer<typeof deleteAccountSchema>) {
     const parsed = deleteAccountSchema.parse(dto);
     const user = await this.userRepo.findById(userId);
