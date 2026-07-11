@@ -8,4 +8,3 @@ export const pool = new Pool({
 pool.on('error', (err) => {
   console.error('Error inesperado en el pool de Postgres (task-service):', err);
 });
-EOF
