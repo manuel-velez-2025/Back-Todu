@@ -5,8 +5,10 @@ import { AvatarRepository } from './infrastructure/repositories/AvatarRepository
 import { GamificationRepository } from './infrastructure/repositories/GamificationRepository';
 import { AvatarService } from './application/avatarService';
 import { GamificationService } from './application/gamificationService';
-import { createGamificationController, createAvatarController } from './infrastructure/http/controllers';
+import { createGamificationController, createAvatarController, createFarkleController } from './infrastructure/http/controllers';
 import { authMiddleware } from './infrastructure/http/authMiddleware';
+import { FarkleRepository } from './infrastructure/repositories/FarkleRepository';
+import { FarkleService } from './application/farkleService';
 
 const app = express();
 app.use(cors());
@@ -19,11 +21,17 @@ const avatarService = new AvatarService(avatarRepo);
 const gamificationService = new GamificationService(progressRepo, avatarService, gamificationRepo);
 
 const gamificationController = createGamificationController(gamificationService);
+const farkleRepo = new FarkleRepository();
+const farkleService = new FarkleService(farkleRepo, avatarService);
+const farkleController = createFarkleController(farkleService);
 const avatarController = createAvatarController(avatarService);
 
 app.post('/xp/atomic', authMiddleware, gamificationController.addXpAtomic);
 app.post('/xp/gastar', authMiddleware, gamificationController.gastarXp);
 app.get('/xp/progreso/:userId', gamificationController.getProgreso);
+app.post('/juegos/farkle/apostar', authMiddleware, farkleController.apostar);
+app.post('/juegos/farkle/resolver', authMiddleware, farkleController.resolver);
+app.get('/juegos/farkle/activa', authMiddleware, farkleController.activa);
 app.get('/gamificacion/progreso/:userId', authMiddleware, gamificationController.getProgreso);
 
 app.post('/gamification/xp/award', authMiddleware, gamificationController.awardXp);
