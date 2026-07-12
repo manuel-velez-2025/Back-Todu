@@ -56,7 +56,7 @@ export class TaskService {
     await this.repo.delete(id);
   }
 
-  async completeTask(taskId: string, userId: string) {
+  async completeTask(taskId: string, userId: string, token?: string) {
     const tarea = await this.repo.findById(taskId);
     if (!tarea) throw Object.assign(new Error('Tarea no encontrada'), { statusCode: 404 });
     if (tarea.usuarioId !== userId) {
@@ -65,19 +65,20 @@ export class TaskService {
     if (tarea.estado === 'completed') {
       throw Object.assign(new Error('La tarea ya esta completada'), { statusCode: 409 });
     }
-    
+
     if (this.gamificationClient) {
       await this.gamificationClient.awardXp({
         userId: tarea.usuarioId,
         xp: tarea.xpValor,
         evento: 'TASK_COMPLETED',
+        token,
       });
     }
 
     return this.repo.markCompleted(taskId);
   }
 
-  async submitEvidence(taskId: string, userId: string, file: Express.Multer.File) {
+  async submitEvidence(taskId: string, userId: string, file: Express.Multer.File, token?: string) {
     if (!this.vision) {
       throw new Error('ClaudeVisionAdapter no configurado');
     }
@@ -87,12 +88,6 @@ export class TaskService {
       throw Object.assign(new Error('No tienes permiso para modificar esta tarea'), { statusCode: 403 });
     }
 
-    // El titulo es lo que realmente describe la actividad a verificar
-    // (ej. "gimnasio"). La descripcion hoy solo guarda el horario
-    // (ej. "09:00 hrs"), asi que se la damos a la IA como contexto de
-    // cuando estaba programada la tarea, no como algo que la foto deba
-    // demostrar visualmente (una foto no puede probar la hora en que
-    // se tomo salvo que aparezca un reloj o timestamp).
     const contextoParaIA = tarea.descripcion
       ? `${tarea.titulo} (tarea programada para: ${tarea.descripcion})`
       : tarea.titulo;
@@ -111,7 +106,7 @@ export class TaskService {
 
     const nuevoEstado = validation.approved ? 'completed' : 'rejected';
 
-    await this.repo.updateEvidencia(taskId, {
+    const tareaActualizada = await this.repo.updateEvidencia(taskId, {
       urlEvidencia,
       estado: nuevoEstado,
       proofReason: validation.reason,
@@ -130,13 +125,14 @@ export class TaskService {
           userId: tarea.usuarioId,
           xp: tarea.xpValor,
           evento: 'TASK_COMPLETED',
+          token,
         });
       } catch (err) {
         console.error('Error al notificar a gamification-service tras evidencia aprobada:', err);
       }
     }
 
-    return { estado: nuevoEstado, url: urlEvidencia, validacion: validation };
+    return { estado: nuevoEstado, url: urlEvidencia, validacion: validation, tarea: tareaActualizada };
   }
 
   async processOverdueTasks(): Promise<number> {

@@ -63,7 +63,8 @@ export function createTaskController(taskService: TaskService) {
 
     completarTarea: async (req: Request, res: Response) => {
       try {
-        const tarea = await taskService.completeTask(req.params.id, req.user!.id);
+        const token = req.headers.authorization?.replace(/^Bearer\s+/i, '');
+        const tarea = await taskService.completeTask(req.params.id, req.user!.id, token);
         res.status(200).json({ mensaje: 'Tarea completada — XP sumado correctamente', tarea });
       } catch (err: any) {
         handleError(res, err, 'Error al completar tarea');
@@ -85,7 +86,8 @@ export function createTaskController(taskService: TaskService) {
           res.status(400).json({ mensaje: 'Debes subir un archivo de imagen en el campo "evidencia"' });
           return;
         }
-        const result = await taskService.submitEvidence(req.params.id, req.user!.id, req.file);
+        const token = req.headers.authorization?.replace(/^Bearer\s+/i, '');
+        const result = await taskService.submitEvidence(req.params.id, req.user!.id, req.file, token);
         res.status(200).json({
           mensaje: result.validacion.approved
             ? 'Evidencia validada correctamente'
