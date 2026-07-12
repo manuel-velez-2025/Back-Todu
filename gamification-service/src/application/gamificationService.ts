@@ -27,6 +27,11 @@ export const taskCompletionSchema = z.object({
   evento: z.string().optional(),
 });
 
+export const gastarXpSchema = z.object({
+  monto: z.number().int().positive('monto debe ser un entero positivo'),
+  motivo: z.string().optional(),
+});
+
 const XP_BASE = 50;
 
 export class GamificationService {
@@ -52,16 +57,28 @@ export class GamificationService {
     const evento = resultado.subioDeNivel ? 'LEVEL_UP' : parsed.evento || 'TASK_COMPLETED';
     await this.avatarService.reaccionarAEvento(parsed.userId, evento);
 
-    return {
+   return {
       userId: parsed.userId,
       xpActual: progreso.xpTotal,
-      xpAgregado: parsed.xp,
+      xpDisponible: progreso.xpDisponible,
+      xpBase: parsed.xp,
+      xpAgregado: resultado.xpGanado,
       xpSiguienteNivel: progreso.xpSiguienteNivel,
       nivel: progreso.nivel,
       subioDeNivel: resultado.subioDeNivel,
       rachaActual: progreso.rachaActual,
       tareasCompletadas: progreso.tareasCompletadas,
       progresoPorcentaje: progreso.progresoPorcentaje,
+    };
+  }
+  async gastarXp(userId: string, dto: unknown) {
+    const parsed = gastarXpSchema.parse(dto);
+    const { xpDisponible } = await this.progressRepo.gastarXp(userId, parsed.monto);
+    return {
+      userId,
+      montoGastado: parsed.monto,
+      motivo: parsed.motivo || null,
+      xpDisponible,
     };
   }
 

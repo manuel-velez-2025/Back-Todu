@@ -32,14 +32,25 @@ export function createGamificationController(service: GamificationService) {
         res.status(200).json({
           userId: progreso.usuarioId,
           xpActual: progreso.xpTotal,
+          xpDisponible: progreso.xpDisponible,
           xpSiguienteNivel: progreso.xpSiguienteNivel,
           nivel: progreso.nivel,
           rachaActual: progreso.rachaActual,
           tareasCompletadas: progreso.tareasCompletadas,
           progresoPorcentaje: progreso.progresoPorcentaje,
         });
+          
       } catch (err: any) {
         handleError(res, err, 'Error al obtener progreso');
+      }
+    },
+    
+    gastarXp: async (req: Request, res: Response) => {
+      try {
+        const result = await service.gastarXp(req.user!.id, req.body);
+        res.status(200).json(result);
+      } catch (err: any) {
+        handleError(res, err, 'Error al gastar XP');
       }
     },
 

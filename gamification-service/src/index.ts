@@ -22,6 +22,7 @@ const gamificationController = createGamificationController(gamificationService)
 const avatarController = createAvatarController(avatarService);
 
 app.post('/xp/atomic', authMiddleware, gamificationController.addXpAtomic);
+app.post('/xp/gastar', authMiddleware, gamificationController.gastarXp);
 app.get('/xp/progreso/:userId', gamificationController.getProgreso);
 app.get('/gamificacion/progreso/:userId', authMiddleware, gamificationController.getProgreso);
 

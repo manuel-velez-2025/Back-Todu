@@ -1,11 +1,22 @@
 export interface Progreso {
   usuarioId: string;
   xpTotal: number;
+  xpDisponible: number;
   nivel: number;
   rachaActual: number;
   tareasCompletadas: number;
   xpSiguienteNivel: number;
   progresoPorcentaje: number;
+}
+
+export interface PartidaFarkle {
+  id: string;
+  usuarioId: string;
+  apuesta: number;
+  estado: 'en_curso' | 'ganada' | 'perdida';
+  premio: number;
+  createdAt: Date;
+  resueltaAt: Date | null;
 }
 
 export interface AvatarEstado {
