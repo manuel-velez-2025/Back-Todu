@@ -87,7 +87,16 @@ export class TaskService {
       throw Object.assign(new Error('No tienes permiso para modificar esta tarea'), { statusCode: 403 });
     }
 
-    const validation = await this.vision.validateEvidence(file.buffer, file.mimetype, tarea.descripcion || tarea.titulo);
+    // El titulo es lo que realmente describe la actividad a verificar
+    // (ej. "gimnasio"). La descripcion hoy solo guarda el horario
+    // (ej. "09:00 hrs"), asi que se la damos a la IA como contexto de
+    // cuando estaba programada la tarea, no como algo que la foto deba
+    // demostrar visualmente (una foto no puede probar la hora en que
+    // se tomo salvo que aparezca un reloj o timestamp).
+    const contextoParaIA = tarea.descripcion
+      ? `${tarea.titulo} (tarea programada para: ${tarea.descripcion})`
+      : tarea.titulo;
+    const validation = await this.vision.validateEvidence(file.buffer, file.mimetype, contextoParaIA);
 
     let urlEvidencia: string;
     if (this.storageProvider) {

@@ -78,7 +78,9 @@ export class ClaudeVisionAdapter {
               type: 'text',
               text:
                 `La tarea a verificar es: "${taskDescription || 'sin descripcion'}". ` +
-                `La imagen muestra evidencia creible de que esta tarea se completo? ` +
+                `La imagen muestra evidencia creible de que esta actividad se realizo? ` +
+                `No exijas que la foto demuestre la hora exacta (relojes, timestamps): ` +
+                `evalua unicamente si la imagen corresponde a la actividad descrita. ` +
                 `Responde UNICAMENTE con un JSON valido, sin texto adicional, con esta forma exacta: ` +
                 `{"approved": boolean, "reason": "string breve en espanol", "confidence": "low"|"medium"|"high"}`,
             },
