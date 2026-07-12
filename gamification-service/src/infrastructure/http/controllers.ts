@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { GamificationService } from '../../application/gamificationService';
 import { AvatarService } from '../../application/avatarService';
+import { FarkleService } from '../../application/farkleService';
 
 function handleError(res: Response, error: any, defaultMensaje: string) {
   if (error.name === 'ZodError') {
@@ -69,6 +70,37 @@ export function createGamificationController(service: GamificationService) {
         res.status(200).json(status);
       } catch (err: any) {
         handleError(res, err, 'Error al obtener estado del robot');
+      }
+    },
+  };
+}
+
+export function createFarkleController(service: FarkleService) {
+  return {
+    apostar: async (req: Request, res: Response) => {
+      try {
+        const result = await service.apostar(req.user!.id, req.body);
+        res.status(201).json(result);
+      } catch (err: any) {
+        handleError(res, err, 'Error al registrar la apuesta');
+      }
+    },
+
+    resolver: async (req: Request, res: Response) => {
+      try {
+        const result = await service.resolver(req.user!.id, req.body);
+        res.status(200).json(result);
+      } catch (err: any) {
+        handleError(res, err, 'Error al resolver la partida');
+      }
+    },
+
+    activa: async (req: Request, res: Response) => {
+      try {
+        const result = await service.partidaActiva(req.user!.id);
+        res.status(200).json(result);
+      } catch (err: any) {
+        handleError(res, err, 'Error al consultar la partida activa');
       }
     },
   };

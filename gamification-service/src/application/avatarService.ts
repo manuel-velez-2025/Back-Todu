@@ -13,6 +13,8 @@ const EVENTO_A_EMOCION: Record<string, string> = {
   STREAK_DAY: 'Surprised',
   TASK_EXPIRED: 'Scared',
   NO_ACTIVITY: 'Sad',
+  FARKLE_WIN: 'Happy',
+  FARKLE_LOSE: 'Sad',
 };
 
 export class AvatarService {
