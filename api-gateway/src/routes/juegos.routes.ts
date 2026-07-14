@@ -4,9 +4,11 @@ import { checkLevel } from '../middlewares/checkLevel';
 import { proxyTo } from '../middlewares/proxy';
 
 const router = Router();
-const GEO_SERVICE_URL = process.env.GEO_SERVICE_URL || 'http://geo-service:3005';
+const GAMIFICATION_SERVICE_URL =
+  process.env.GAMIFICATION_SERVICE_URL || 'http://gamification-service:3003';
+
 router.use(authMiddleware);
-router.use(checkLevel(2));
-router.use(proxyTo(GEO_SERVICE_URL));
+router.use(checkLevel(3));
+router.use(proxyTo(GAMIFICATION_SERVICE_URL));
 
 export default router;
