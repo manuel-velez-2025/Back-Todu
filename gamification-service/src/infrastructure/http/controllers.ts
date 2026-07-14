@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { GamificationService } from '../../application/gamificationService';
 import { AvatarService } from '../../application/avatarService';
-import { FarkleService } from '../../application/farkleService';
+import { FarkleService, MemoramaService } from '../../application/farkleService';
 
 function handleError(res: Response, error: any, defaultMensaje: string) {
   if (error.name === 'ZodError') {
@@ -162,6 +162,18 @@ export function createAvatarController(service: AvatarService) {
         res.status(200).json({ userId, emotion, event, timestamp: new Date().toISOString() });
       } catch (err: any) {
         handleError(res, err, 'Error al procesar evento del robot');
+      }
+    },
+  };
+}
+export function createMemoramaController(service: MemoramaService) {
+  return {
+    reclamarVictoria: async (req: Request, res: Response) => {
+      try {
+        const result = await service.reclamarVictoria(req.user!.id);
+        res.status(200).json(result);
+      } catch (err: any) {
+        handleError(res, err, 'Error al reclamar la recompensa del memorama');
       }
     },
   };

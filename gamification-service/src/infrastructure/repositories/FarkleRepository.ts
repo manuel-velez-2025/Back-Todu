@@ -124,4 +124,51 @@ export class FarkleRepository {
     );
     return rows[0] ? toPartida(rows[0]) : null;
   }
+  
+  async recompensaMemorama(
+    usuarioId: string,
+    xp: number,
+    limiteDiario: number,
+  ): Promise<{ xpDisponible: number; veces: number }> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const registro = await client.query(
+        `INSERT INTO recompensas_memorama (usuario_id, fecha, veces)
+         VALUES ($1, CURRENT_DATE, 1)
+         ON CONFLICT (usuario_id, fecha)
+         DO UPDATE SET veces = recompensas_memorama.veces + 1
+         WHERE recompensas_memorama.veces < $2
+         RETURNING veces`,
+        [usuarioId, limiteDiario],
+      );
+
+      if (registro.rowCount === 0) {
+        await client.query('ROLLBACK');
+        throw Object.assign(
+          new Error(`Ya reclamaste las ${limiteDiario} recompensas de memorama de hoy. Vuelve mañana.`),
+          { statusCode: 429 },
+        );
+      }
+
+      const acredito = await client.query(
+        `CALL acreditar_xp_disponible($1, $2, NULL)`,
+        [usuarioId, xp],
+      );
+
+      await client.query('COMMIT');
+      return {
+        xpDisponible: acredito.rows[0].p_xp_disponible,
+        veces: registro.rows[0].veces,
+      };
+    } catch (err: any) {
+      if (!err.statusCode) {
+        await client.query('ROLLBACK').catch(() => {});
+      }
+      throw mapErrorEconomia(err);
+    } finally {
+      client.release();
+    }
+  }
 }

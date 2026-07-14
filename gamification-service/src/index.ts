@@ -9,6 +9,8 @@ import { createGamificationController, createAvatarController, createFarkleContr
 import { authMiddleware } from './infrastructure/http/authMiddleware';
 import { FarkleRepository } from './infrastructure/repositories/FarkleRepository';
 import { FarkleService } from './application/farkleService';
+import { MemoramaService } from './application/farkleService';
+import { createMemoramaController } from './infrastructure/http/controllers';
 
 const app = express();
 app.use(cors());
@@ -24,6 +26,8 @@ const gamificationController = createGamificationController(gamificationService)
 const farkleRepo = new FarkleRepository();
 const farkleService = new FarkleService(farkleRepo, avatarService);
 const farkleController = createFarkleController(farkleService);
+const memoramaService = new MemoramaService(farkleRepo);
+const memoramaController = createMemoramaController(memoramaService);
 const avatarController = createAvatarController(avatarService);
 
 app.post('/xp/atomic', authMiddleware, gamificationController.addXpAtomic);
@@ -33,6 +37,7 @@ app.post('/juegos/farkle/apostar', authMiddleware, farkleController.apostar);
 app.post('/juegos/farkle/resolver', authMiddleware, farkleController.resolver);
 app.get('/juegos/farkle/activa', authMiddleware, farkleController.activa);
 app.get('/gamificacion/progreso/:userId', authMiddleware, gamificationController.getProgreso);
+app.post('/juegos/memorama/victoria', authMiddleware, memoramaController.reclamarVictoria);
 
 app.post('/gamification/xp/award', authMiddleware, gamificationController.awardXp);
 

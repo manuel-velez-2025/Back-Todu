@@ -34,6 +34,8 @@ export class FarkleService {
     };
   }
 
+  
+
   async resolver(usuarioId: string, dto: unknown) {
     const parsed = resolverSchema.parse(dto);
     const gano = parsed.resultado === 'ganada';
@@ -65,6 +67,26 @@ export class FarkleService {
         estado: partida.estado,
         createdAt: partida.createdAt,
       },
+    };
+  }
+}
+const XP_MEMORAMA_VICTORIA = 25;
+const LIMITE_DIARIO_MEMORAMA = 5;
+
+export class MemoramaService {
+  constructor(private repo: FarkleRepository) {}
+  
+  async reclamarVictoria(usuarioId: string) {
+    const resultado = await this.repo.recompensaMemorama(
+      usuarioId,
+      XP_MEMORAMA_VICTORIA,
+      LIMITE_DIARIO_MEMORAMA,
+    );
+    return {
+      xpGanado: XP_MEMORAMA_VICTORIA,
+      xpDisponible: resultado.xpDisponible,
+      recompensasHoy: resultado.veces,
+      limiteDiario: LIMITE_DIARIO_MEMORAMA,
     };
   }
 }
