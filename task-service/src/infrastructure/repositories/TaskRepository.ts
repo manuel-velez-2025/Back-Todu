@@ -16,15 +16,37 @@ function rowToTarea(row: any): Tarea {
     proofConfidence: row.proof_confidence,
     fechaCreacion: row.fecha_creacion,
     fechaVencimiento: row.fecha_vencimiento ?? null,
+    lugar: row.lugar_nombre
+      ? {
+          nombre: row.lugar_nombre,
+          direccion: row.lugar_direccion,
+          placeId: row.place_id,
+          lat: row.lugar_lat,
+          lng: row.lugar_lng,
+        }
+      : null,
   };
 }
 
 export class TaskRepository {
-  async create(usuarioId: string, data: CreateTaskDTO): Promise<Tarea> {
+async create(usuarioId: string, data: CreateTaskDTO): Promise<Tarea> {
     const { rows } = await pool.query(
-      `INSERT INTO tareas (usuario_id, titulo, descripcion, xp_valor, dificultad, estado, fecha_vencimiento)
-       VALUES ($1, $2, $3, $4, $5, 'pending', $6) RETURNING *`,
-      [usuarioId, data.titulo, data.descripcion ?? null, data.xpValor, data.dificultad ?? 'easy', data.fechaVencimiento ?? null],
+      `INSERT INTO tareas (usuario_id, titulo, descripcion, xp_valor, dificultad, estado, fecha_vencimiento,
+                           lugar_nombre, lugar_direccion, place_id, lugar_lat, lugar_lng)
+       VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11) RETURNING *`,
+      [
+        usuarioId,
+        data.titulo,
+        data.descripcion ?? null,
+        data.xpValor,
+        data.dificultad ?? 'easy',
+        data.fechaVencimiento ?? null,
+        data.lugar?.nombre ?? null,
+        data.lugar?.direccion ?? null,
+        data.lugar?.placeId ?? null,
+        data.lugar?.lat ?? null,
+        data.lugar?.lng ?? null,
+      ],
     );
     return rowToTarea(rows[0]);
   }

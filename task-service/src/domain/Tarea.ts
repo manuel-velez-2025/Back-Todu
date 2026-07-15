@@ -1,3 +1,11 @@
+export interface LugarTarea {
+  nombre: string;
+  direccion?: string | null;
+  placeId?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+}
+
 export interface Tarea {
   id: string;
   usuarioId: string;
@@ -12,6 +20,7 @@ export interface Tarea {
   proofConfidence: string | null;
   fechaCreacion: Date;
   fechaVencimiento: Date | null;
+  lugar: LugarTarea | null;
 }
 
 export interface CreateTaskDTO {
@@ -20,6 +29,7 @@ export interface CreateTaskDTO {
   xpValor: number;
   dificultad?: 'easy' | 'medium' | 'hard';
   fechaVencimiento?: string;
+  lugar?: LugarTarea;
 }
 
 export type TaskDifficulty = 'easy' | 'medium' | 'hard';

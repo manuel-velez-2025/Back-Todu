@@ -10,6 +10,15 @@ export const createTaskSchema = z.object({
   xpValor: z.number().int().positive('xpValor debe ser un numero positivo'),
   dificultad: z.enum(['easy', 'medium', 'hard']).optional(),
   fechaVencimiento: z.string().optional(),
+  lugar: z
+    .object({
+      nombre: z.string().min(1).max(120),
+      direccion: z.string().max(500).optional(),
+      placeId: z.string().max(120).optional(),
+      lat: z.number().min(-90).max(90).optional(),
+      lng: z.number().min(-180).max(180).optional(),
+    })
+    .optional(),
 });
 
 export const updateTaskSchema = createTaskSchema.partial();
