@@ -14,6 +14,7 @@ import {
   createTrialController,
 } from './infrastructure/http/controllers';
 import { authMiddleware } from './infrastructure/http/authMiddleware';
+import { GamificationClient } from './infrastructure/http/GamificationClient';
 
 const app = express();
 app.use(cors());
@@ -24,7 +25,8 @@ const hashProvider = new BcryptAdapter();
 const googleAuthAdapter = new GoogleAuthAdapter();
 const authService = new AuthService(userRepo, hashProvider, googleAuthAdapter);
 const profileService = new ProfileService(userRepo);
-const inventoryService = new InventoryService(userRepo);
+const gamificationClient = new GamificationClient();
+const inventoryService = new InventoryService(userRepo, gamificationClient);
 const trialService = new TrialService(userRepo);
 
 const authController = createAuthController(authService);
@@ -45,6 +47,8 @@ app.get('/inventario', authMiddleware, inventoryController.getInventario);
 app.post('/inventario/agregar', authMiddleware, inventoryController.agregar);
 app.post('/inventario/equipar', authMiddleware, inventoryController.equipar);
 app.post('/inventario/desequipar', authMiddleware, inventoryController.desequipar);
+app.get('/inventario/catalogo', authMiddleware, inventoryController.catalogo);
+app.post('/inventario/comprar', authMiddleware, inventoryController.comprar);
 
 app.get('/users/me/trial', authMiddleware, trialController.getTrialStatus);
 

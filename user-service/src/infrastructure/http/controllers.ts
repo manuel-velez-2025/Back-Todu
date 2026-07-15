@@ -98,6 +98,24 @@ export function createInventoryController(inventoryService: InventoryService) {
         handleError(res, err, 'Error al obtener inventario');
       }
     },
+    catalogo: async (req: Request, res: Response) => {
+      try {
+        const result = await inventoryService.catalogo(req.user!.id);
+        res.status(200).json(result);
+      } catch (err: any) {
+        handleError(res, err, 'Error al obtener el catálogo');
+      }
+    },
+
+    comprar: async (req: Request, res: Response) => {
+      try {
+        const token = req.headers.authorization!.replace(/^Bearer\s+/i, '');
+        const result = await inventoryService.comprar(req.user!.id, req.body, token);
+        res.status(201).json(result);
+      } catch (err: any) {
+        handleError(res, err, 'Error al comprar el item');
+      }
+    },
 
     agregar: async (req: Request, res: Response) => {
       try {

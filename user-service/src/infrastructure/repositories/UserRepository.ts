@@ -197,4 +197,42 @@ export class UserRepository {
       [usuarioId, itemId],
     );
   }
+  async getItemCatalogo(itemId: string): Promise<{ itemId: string; nombre: string; precio: number } | null> {
+    const { rows } = await pool.query(
+      `SELECT item_id, nombre, precio FROM catalogo_items
+       WHERE item_id = $1 AND activo = true`,
+      [itemId],
+    );
+    return rows[0]
+      ? { itemId: rows[0].item_id, nombre: rows[0].nombre, precio: rows[0].precio }
+      : null;
+  }
+
+  async getCatalogo(usuarioId: string): Promise<any[]> {
+    const { rows } = await pool.query(
+      `SELECT c.item_id, c.nombre, c.precio,
+              (i.id IS NOT NULL) AS comprado,
+              COALESCE(i.is_equipped, false) AS is_equipped
+       FROM catalogo_items c
+       LEFT JOIN inventario i
+         ON i.item_id = c.item_id AND i.usuario_id = $1
+       WHERE c.activo = true
+       ORDER BY c.precio, c.item_id`,
+      [usuarioId],
+    );
+    return rows.map((r) => ({
+      itemId: r.item_id,
+      nombre: r.nombre,
+      precio: r.precio,
+      comprado: r.comprado,
+      isEquipped: r.is_equipped,
+    }));
+  }
+
+  async eliminarItem(usuarioId: string, itemId: string): Promise<void> {
+    await pool.query(
+      'DELETE FROM inventario WHERE usuario_id = $1 AND item_id = $2',
+      [usuarioId, itemId],
+    );
+  }
 }
