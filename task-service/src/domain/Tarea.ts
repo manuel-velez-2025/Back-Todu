@@ -14,6 +14,9 @@ export interface Tarea {
   xpValor: number;
   dificultad: 'easy' | 'medium' | 'hard';
   tipo: 'normal' | 'fija';
+  diasSemana: number[] | null;
+  horaRecordatorio: string | null;
+  aplicaHoy: boolean;
   estado: 'pending' | 'completed' | 'rejected' | 'vencida';
   urlEvidencia: string | null;
   proofStatus: string | null;
@@ -30,6 +33,8 @@ export interface CreateTaskDTO {
   xpValor: number;
   dificultad?: 'easy' | 'medium' | 'hard';
   tipo?: 'normal' | 'fija';
+  diasSemana?: number[];
+  horaRecordatorio?: string;
   fechaVencimiento?: string;
   lugar?: LugarTarea;
 }

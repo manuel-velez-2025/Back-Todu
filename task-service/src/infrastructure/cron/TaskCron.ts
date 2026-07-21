@@ -20,6 +20,15 @@ export function iniciarCronTareasVencidas(taskService: TaskService): void {
     } catch (err) {
       console.error('[TaskCron] Error enviando notificaciones de tareas por vencer:', err);
     }
+    try {
+      const paraRecordar = await taskService.getFijasParaRecordar();
+      for (const t of paraRecordar) {
+        await pushNotifier.notificar(t.usuarioId, 'Recordatorio', `Es hora de: ${t.titulo}`);
+        await taskService.marcarRecordatorioEnviado(t.id);
+      }
+    } catch (err) {
+      console.error('[TaskCron] Error enviando recordatorios de fijas:', err);
+    }
   });
 
   cron.schedule(

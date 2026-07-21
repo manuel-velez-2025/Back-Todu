@@ -11,6 +11,8 @@ export const createTaskSchema = z.object({
   xpValor: z.number().int().positive('xpValor debe ser un numero positivo'),
   dificultad: z.enum(['easy', 'medium', 'hard']).optional(),
   tipo: z.enum(['normal', 'fija']).optional(),
+  diasSemana: z.array(z.number().int().min(1).max(7)).min(1).max(7).optional(),
+  horaRecordatorio: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Formato HH:MM').optional(),
   fechaVencimiento: z.string().optional(),
   lugar: z
     .object({
@@ -55,8 +57,6 @@ export class TaskService {
 
   async createTask(usuarioId: string, data: unknown) {
     const parsed = createTaskSchema.parse(data);
-    // Las fijas no llevan fecha de vencimiento: "vencen" cada
-    // medianoche vía el cron diario, no por fecha puntual.
     if (parsed.tipo === 'fija') {
       parsed.fechaVencimiento = undefined;
     }
@@ -210,6 +210,14 @@ export class TaskService {
 
   async getTareasPorVencerEn(minutos: number) {
     return this.repo.findPorVencerEn(minutos);
+  }
+
+  async getFijasParaRecordar() {
+    return this.repo.findFijasParaRecordar();
+  }
+
+  async marcarRecordatorioEnviado(tareaId: string) {
+    return this.repo.marcarRecordatorioEnviado(tareaId);
   }
 
   async getReporteEvidencias(usuarioId: string) {

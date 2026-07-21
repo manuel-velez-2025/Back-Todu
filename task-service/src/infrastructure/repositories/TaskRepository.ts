@@ -1,6 +1,12 @@
 import { pool } from '../db/pool';
 import { Tarea, CreateTaskDTO } from '../../domain/Tarea';
 
+
+function isoDiaDeHoy(): number {
+  const dow = new Date().getDay();
+  return dow === 0 ? 7 : dow; 
+}
+
 function rowToTarea(row: any): Tarea {
   return {
     id: row.id,
@@ -10,6 +16,9 @@ function rowToTarea(row: any): Tarea {
     xpValor: row.xp_valor,
     dificultad: row.dificultad ?? 'easy',
     tipo: row.tipo ?? 'normal',
+    diasSemana: row.dias_semana ?? null,
+    horaRecordatorio: row.hora_recordatorio ?? null,
+    aplicaHoy: row.tipo !== 'fija' || !row.dias_semana || row.dias_semana.includes(isoDiaDeHoy()),
     estado: row.estado,
     urlEvidencia: row.url_evidencia,
     proofStatus: row.proof_status,
@@ -32,22 +41,16 @@ function rowToTarea(row: any): Tarea {
 export class TaskRepository {
   async create(usuarioId: string, data: CreateTaskDTO): Promise<Tarea> {
     const { rows } = await pool.query(
-      `INSERT INTO tareas (usuario_id, titulo, descripcion, xp_valor, dificultad, tipo, estado, fecha_vencimiento,
+      `INSERT INTO tareas (usuario_id, titulo, descripcion, xp_valor, dificultad, tipo, dias_semana, hora_recordatorio, estado, fecha_vencimiento,
                            lugar_nombre, lugar_direccion, place_id, lugar_lat, lugar_lng)
-       VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9, $10, $11, $12) RETURNING *`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9, $10, $11, $12, $13, $14) RETURNING *`,
       [
-        usuarioId,
-        data.titulo,
-        data.descripcion ?? null,
-        data.xpValor,
-        data.dificultad ?? 'easy',
-        data.tipo ?? 'normal',
+        usuarioId, data.titulo, data.descripcion ?? null, data.xpValor,
+        data.dificultad ?? 'easy', data.tipo ?? 'normal',
+        data.diasSemana ?? null, data.horaRecordatorio ?? null,
         data.fechaVencimiento ?? null,
-        data.lugar?.nombre ?? null,
-        data.lugar?.direccion ?? null,
-        data.lugar?.placeId ?? null,
-        data.lugar?.lat ?? null,
-        data.lugar?.lng ?? null,
+        data.lugar?.nombre ?? null, data.lugar?.direccion ?? null,
+        data.lugar?.placeId ?? null, data.lugar?.lat ?? null, data.lugar?.lng ?? null,
       ],
     );
     return rowToTarea(rows[0]);
@@ -138,6 +141,8 @@ export class TaskRepository {
       `SELECT usuario_id, COUNT(*)::int AS cantidad
        FROM tareas
        WHERE tipo = 'fija' AND estado = 'pending'
+         AND (dias_semana IS NULL OR
+              (EXTRACT(ISODOW FROM NOW() - INTERVAL '1 day'))::int = ANY(dias_semana))
        GROUP BY usuario_id`,
     );
     return rows.map((r) => ({ usuarioId: r.usuario_id, cantidad: r.cantidad }));
@@ -170,6 +175,29 @@ export class TaskRepository {
       [minutos],
     );
     return rows.map((r) => ({ id: r.id, usuarioId: r.usuario_id, titulo: r.titulo }));
+  }
+
+  async findFijasParaRecordar(): Promise<{ id: string; usuarioId: string; titulo: string }[]> {
+    const { rows } = await pool.query(
+      `SELECT id, usuario_id, titulo FROM tareas
+       WHERE tipo = 'fija' AND estado = 'pending'
+         AND hora_recordatorio IS NOT NULL
+         AND hora_recordatorio BETWEEN (NOW()::time) AND (NOW()::time + INTERVAL '1 minute')
+         AND (dias_semana IS NULL OR (EXTRACT(ISODOW FROM NOW()))::int = ANY(dias_semana))
+         AND NOT EXISTS (
+           SELECT 1 FROM recordatorios_enviados r
+           WHERE r.tarea_id = tareas.id AND r.fecha = CURRENT_DATE
+         )`,
+    );
+    return rows.map((r) => ({ id: r.id, usuarioId: r.usuario_id, titulo: r.titulo }));
+  }
+
+  async marcarRecordatorioEnviado(tareaId: string): Promise<void> {
+    await pool.query(
+      `INSERT INTO recordatorios_enviados (tarea_id, fecha) VALUES ($1, CURRENT_DATE)
+       ON CONFLICT DO NOTHING`,
+      [tareaId],
+    );
   }
 
   async marcarNotificada(tareaId: string, tipo: string): Promise<void> {
