@@ -3,12 +3,14 @@ import { TaskRepository } from '../infrastructure/repositories/TaskRepository';
 import { ClaudeVisionAdapter } from '../infrastructure/external/claudeVisionAdapter';
 import { IStorageProvider } from '../domain/interfaces/IStorageProvider';
 import type { IGamificationClient } from './ports/IGamificationClient';
+import { PushRepository } from '../infrastructure/repositories/PushRepository';
 
 export const createTaskSchema = z.object({
   titulo: z.string().min(1, 'El titulo es requerido'),
   descripcion: z.string().optional(),
   xpValor: z.number().int().positive('xpValor debe ser un numero positivo'),
   dificultad: z.enum(['easy', 'medium', 'hard']).optional(),
+  tipo: z.enum(['normal', 'fija']).optional(),
   fechaVencimiento: z.string().optional(),
   lugar: z
     .object({
@@ -29,10 +31,35 @@ export class TaskService {
     private vision?: ClaudeVisionAdapter,
     private storageProvider?: IStorageProvider,
     private gamificationClient?: IGamificationClient,
+    private pushRepo?: PushRepository,
   ) {}
+
+  async suscribirPush(usuarioId: string, dto: unknown) {
+    const parsed = z
+      .object({
+        endpoint: z.string().url(),
+        keys: z.object({ p256dh: z.string().min(1), auth: z.string().min(1) }),
+      })
+      .parse(dto);
+    if (!this.pushRepo) throw new Error('PushRepository no configurado');
+    await this.pushRepo.suscribir(usuarioId, parsed.endpoint, parsed.keys.p256dh, parsed.keys.auth);
+    return { ok: true };
+  }
+
+  async desuscribirPush(usuarioId: string, dto: unknown) {
+    const parsed = z.object({ endpoint: z.string().url() }).parse(dto);
+    if (!this.pushRepo) throw new Error('PushRepository no configurado');
+    await this.pushRepo.desuscribir(usuarioId, parsed.endpoint);
+    return { ok: true };
+  }
 
   async createTask(usuarioId: string, data: unknown) {
     const parsed = createTaskSchema.parse(data);
+    // Las fijas no llevan fecha de vencimiento: "vencen" cada
+    // medianoche vía el cron diario, no por fecha puntual.
+    if (parsed.tipo === 'fija') {
+      parsed.fechaVencimiento = undefined;
+    }
     return this.repo.create(usuarioId, parsed);
   }
 
@@ -145,14 +172,51 @@ export class TaskService {
   }
 
   async processOverdueTasks(): Promise<number> {
-    const actualizadas = await this.repo.marcarTareasVencidas();
-    if (actualizadas > 0) {
-      console.log(`[TaskCron] ${actualizadas} tareas marcadas como vencidas`);
+    const vencidasPorUsuario = await this.repo.marcarTareasVencidas();
+    let total = 0;
+    for (const v of vencidasPorUsuario) {
+      total += v.cantidad;
+      if (this.gamificationClient) {
+        try {
+          await this.gamificationClient.reportarIncumplimientos(v.usuarioId, v.cantidad);
+        } catch (err) {
+          console.error('[TaskCron] No se pudo reportar incumplimiento:', err);
+        }
+      }
     }
-    return actualizadas;
+    if (total > 0) {
+      console.log(`[TaskCron] ${total} tareas marcadas como vencidas`);
+    }
+    return total;
+  }
+  
+  async processDailyFixedTasks(): Promise<void> {
+    const noHechas = await this.repo.contarFijasPendientesPorUsuario();
+    for (const u of noHechas) {
+      if (this.gamificationClient) {
+        try {
+          await this.gamificationClient.reportarIncumplimientos(u.usuarioId, u.cantidad);
+        } catch (err) {
+          console.error('[TaskCron] No se pudo reportar fijas incumplidas:', err);
+        }
+      }
+    }
+
+    const reiniciadas = await this.repo.reiniciarFijas();
+    console.log(
+      `[TaskCron] Ciclo diario de fijas: ${noHechas.length} usuarios con incumplidas, ${reiniciadas} tareas reiniciadas`,
+    );
+  }
+
+  async getTareasPorVencerEn(minutos: number) {
+    return this.repo.findPorVencerEn(minutos);
   }
 
   async getReporteEvidencias(usuarioId: string) {
     return this.repo.getReporteEvidencias(usuarioId);
+  }
+
+  async marcarNotificada(tareaId: string, tipo: string) {
+    return this.repo.marcarNotificada(tareaId, tipo);
   }
 }

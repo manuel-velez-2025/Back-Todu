@@ -36,4 +36,23 @@ export class GamificationClient implements IGamificationClient {
       );
     }
   }
+
+  async reportarIncumplimientos(userId: string, cantidad: number): Promise<void> {
+    const response = await fetch(`${GAMIFICATION_BASE_URL}/racha/incumplimiento`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${firmarTokenInterno(userId)}`,
+      },
+      body: JSON.stringify({ userId, cantidad }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw Object.assign(
+        new Error(`Gamification respondio ${response.status}: ${errorBody}`),
+        { statusCode: response.status },
+      );
+    }
+  }
 }

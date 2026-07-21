@@ -9,6 +9,7 @@ function rowToTarea(row: any): Tarea {
     descripcion: row.descripcion,
     xpValor: row.xp_valor,
     dificultad: row.dificultad ?? 'easy',
+    tipo: row.tipo ?? 'normal',
     estado: row.estado,
     urlEvidencia: row.url_evidencia,
     proofStatus: row.proof_status,
@@ -29,17 +30,18 @@ function rowToTarea(row: any): Tarea {
 }
 
 export class TaskRepository {
-async create(usuarioId: string, data: CreateTaskDTO): Promise<Tarea> {
+  async create(usuarioId: string, data: CreateTaskDTO): Promise<Tarea> {
     const { rows } = await pool.query(
-      `INSERT INTO tareas (usuario_id, titulo, descripcion, xp_valor, dificultad, estado, fecha_vencimiento,
+      `INSERT INTO tareas (usuario_id, titulo, descripcion, xp_valor, dificultad, tipo, estado, fecha_vencimiento,
                            lugar_nombre, lugar_direccion, place_id, lugar_lat, lugar_lng)
-       VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11) RETURNING *`,
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9, $10, $11, $12) RETURNING *`,
       [
         usuarioId,
         data.titulo,
         data.descripcion ?? null,
         data.xpValor,
         data.dificultad ?? 'easy',
+        data.tipo ?? 'normal',
         data.fechaVencimiento ?? null,
         data.lugar?.nombre ?? null,
         data.lugar?.direccion ?? null,
@@ -101,7 +103,6 @@ async create(usuarioId: string, data: CreateTaskDTO): Promise<Tarea> {
       [id, data.urlEvidencia, data.estado, data.proofReason, data.proofConfidence],
     );
     return rowToTarea(rows[0]);
-
   }
 
   async registrarIntentoEvidencia(
@@ -115,16 +116,70 @@ async create(usuarioId: string, data: CreateTaskDTO): Promise<Tarea> {
     );
   }
 
-  async marcarTareasVencidas(): Promise<number> {
-    const { rowCount } = await pool.query(
+  async marcarTareasVencidas(): Promise<{ usuarioId: string; cantidad: number }[]> {
+    const { rows } = await pool.query(
       `UPDATE tareas
        SET estado = 'vencida'
        WHERE estado = 'pending'
+         AND tipo = 'normal'
          AND fecha_vencimiento IS NOT NULL
-         AND fecha_vencimiento < NOW()`,
+         AND fecha_vencimiento < NOW()
+       RETURNING usuario_id`,
+    );
+    const porUsuario = new Map<string, number>();
+    for (const r of rows) {
+      porUsuario.set(r.usuario_id, (porUsuario.get(r.usuario_id) ?? 0) + 1);
+    }
+    return Array.from(porUsuario, ([usuarioId, cantidad]) => ({ usuarioId, cantidad }));
+  }
+
+  async contarFijasPendientesPorUsuario(): Promise<{ usuarioId: string; cantidad: number }[]> {
+    const { rows } = await pool.query(
+      `SELECT usuario_id, COUNT(*)::int AS cantidad
+       FROM tareas
+       WHERE tipo = 'fija' AND estado = 'pending'
+       GROUP BY usuario_id`,
+    );
+    return rows.map((r) => ({ usuarioId: r.usuario_id, cantidad: r.cantidad }));
+  }
+
+  async reiniciarFijas(): Promise<number> {
+    const { rowCount } = await pool.query(
+      `UPDATE tareas
+       SET estado = 'pending',
+           url_evidencia = NULL,
+           proof_status = NULL,
+           proof_reason = NULL,
+           proof_confidence = NULL
+       WHERE tipo = 'fija' AND estado <> 'pending'`,
     );
     return rowCount ?? 0;
   }
+
+  async findPorVencerEn(minutos: number): Promise<{ id: string; usuarioId: string; titulo: string }[]> {
+    const { rows } = await pool.query(
+      `SELECT id, usuario_id, titulo FROM tareas
+       WHERE estado = 'pending'
+         AND tipo = 'normal'
+         AND fecha_vencimiento IS NOT NULL
+         AND fecha_vencimiento BETWEEN NOW() AND NOW() + ($1 || ' minutes')::INTERVAL
+         AND NOT EXISTS (
+           SELECT 1 FROM notificaciones_enviadas n
+           WHERE n.tarea_id = tareas.id AND n.tipo = 'por_vencer'
+         )`,
+      [minutos],
+    );
+    return rows.map((r) => ({ id: r.id, usuarioId: r.usuario_id, titulo: r.titulo }));
+  }
+
+  async marcarNotificada(tareaId: string, tipo: string): Promise<void> {
+    await pool.query(
+      `INSERT INTO notificaciones_enviadas (tarea_id, tipo) VALUES ($1, $2)
+       ON CONFLICT DO NOTHING`,
+      [tareaId, tipo],
+    );
+  }
+
   async getReporteEvidencias(usuarioId: string) {
     const { rows } = await pool.query(
       `SELECT * FROM vista_tareas_con_evidencia WHERE usuario_id = $1 ORDER BY ultimo_intento_fecha DESC`,

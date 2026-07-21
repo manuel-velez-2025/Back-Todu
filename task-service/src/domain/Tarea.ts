@@ -13,6 +13,7 @@ export interface Tarea {
   descripcion: string | null;
   xpValor: number;
   dificultad: 'easy' | 'medium' | 'hard';
+  tipo: 'normal' | 'fija';
   estado: 'pending' | 'completed' | 'rejected' | 'vencida';
   urlEvidencia: string | null;
   proofStatus: string | null;
@@ -28,6 +29,7 @@ export interface CreateTaskDTO {
   descripcion?: string;
   xpValor: number;
   dificultad?: 'easy' | 'medium' | 'hard';
+  tipo?: 'normal' | 'fija';
   fechaVencimiento?: string;
   lugar?: LugarTarea;
 }

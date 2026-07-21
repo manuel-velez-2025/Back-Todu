@@ -9,6 +9,7 @@ import { authMiddleware } from './infrastructure/http/authMiddleware';
 import { uploadMiddleware } from './infrastructure/http/upload';
 import { iniciarCronTareasVencidas } from './infrastructure/cron/TaskCron';
 import { GamificationClient } from './infrastructure/http/GamificationClient';
+import { PushRepository } from './infrastructure/repositories/PushRepository';
 
 const app = express();
 app.use(cors());
@@ -18,7 +19,8 @@ const repo = new TaskRepository();
 const vision = new ClaudeVisionAdapter();
 const storageProvider = new CloudinaryAdapter();
 const gamificationClient = new GamificationClient();
-const taskService = new TaskService(repo, vision, storageProvider, gamificationClient);
+const pushRepo = new PushRepository();
+const taskService = new TaskService(repo, vision, storageProvider, gamificationClient, pushRepo);
 const controller = createTaskController(taskService);
 
 const router = express.Router();
@@ -29,6 +31,8 @@ router.get('/:id', authMiddleware, controller.obtenerTareaPorId);
 router.put('/:id', authMiddleware, controller.actualizarTarea);
 router.delete('/:id', authMiddleware, controller.borrarTarea);
 router.patch('/:id/complete', authMiddleware, controller.completarTarea);
+router.post('/notificaciones/suscribir', authMiddleware, controller.suscribirPush);
+router.delete('/notificaciones/suscribir', authMiddleware, controller.desuscribirPush);
 router.post('/:id/evidencia', authMiddleware, (req, res, next) => {
   uploadMiddleware(req, res, (err) => {
     if (err) {

@@ -7,4 +7,5 @@ export interface AwardXpPayload {
 
 export interface IGamificationClient {
   awardXp(payload: AwardXpPayload): Promise<void>;
+  reportarIncumplimientos(userId: string, cantidad: number): Promise<void>;
 }
