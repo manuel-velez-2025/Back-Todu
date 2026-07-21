@@ -7,6 +7,7 @@ import tareasRoutes from './routes/tareas.routes';
 import gamificacionRoutes from './routes/gamificacion.routes';
 import geoRoutes from './routes/geo.routes';
 import juegosRoutes from './routes/juegos.routes';
+import tiendaRoutes from './routes/tienda.routes';
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use('/xp', gamificacionRoutes);
 app.use('/robot', gamificacionRoutes);
 app.use('/juegos', juegosRoutes);
 app.use('/geo', geoRoutes);
+app.use('/tienda', tiendaRoutes);
 
 app.get('/health', (_req, res) => {
   res.status(200).json({
