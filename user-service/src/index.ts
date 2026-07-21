@@ -44,7 +44,7 @@ app.put('/perfil/password', authMiddleware, profileController.changePassword);
 app.delete('/perfil', authMiddleware, profileController.deleteAccount);
 
 app.get('/inventario', authMiddleware, inventoryController.getInventario);
-app.post('/inventario/agregar', authMiddleware, inventoryController.agregar);
+//p.post('/inventario/agregar', authMiddleware, inventoryController.agregar); Borrar despues la ruta 
 app.post('/inventario/equipar', authMiddleware, inventoryController.equipar);
 app.post('/inventario/desequipar', authMiddleware, inventoryController.desequipar);
 app.get('/inventario/catalogo', authMiddleware, inventoryController.catalogo);
