@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { GamificationService } from '../../application/gamificationService';
 import { AvatarService } from '../../application/avatarService';
 import { FarkleService, MemoramaService } from '../../application/farkleService';
+import { TiendaService } from '../../application/tiendaService';
 
 function handleError(res: Response, error: any, defaultMensaje: string) {
   if (error.name === 'ZodError') {
@@ -175,6 +176,22 @@ export function createMemoramaController(service: MemoramaService) {
       } catch (err: any) {
         handleError(res, err, 'Error al reclamar la recompensa del memorama');
       }
+    },
+  };
+}
+export function createTiendaController(service: TiendaService) {
+  return {
+    catalogo: async (req: Request, res: Response) => {
+      try { res.status(200).json(await service.catalogo(req.user!.id)); }
+      catch (err: any) { handleError(res, err, 'Error al obtener catalogo'); }
+    },
+    comprar: async (req: Request, res: Response) => {
+      try { res.status(201).json(await service.comprar(req.user!.id, req.body)); }
+      catch (err: any) { handleError(res, err, 'Error al comprar'); }
+    },
+    inventario: async (req: Request, res: Response) => {
+      try { res.status(200).json(await service.inventario(req.user!.id)); }
+      catch (err: any) { handleError(res, err, 'Error al obtener inventario'); }
     },
   };
 }
