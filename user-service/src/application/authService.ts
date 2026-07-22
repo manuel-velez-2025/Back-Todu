@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
-import { generateSecret, verify } from 'otplib';
+import { authenticator } from 'otplib';
 import QRCode from 'qrcode';
 import { UserRepository } from '../infrastructure/repositories/UserRepository';
 import { IAuthProvider } from '../domain/interfaces/IAuthProvider';
@@ -176,9 +176,9 @@ export class AuthService {
       throw Object.assign(new Error('2FA no esta habilitado para este usuario'), { statusCode: 400 });
     }
 
-    const resultado = await verify({ secret: info.secret, token: parsed.codigo });
-    if (!resultado.valid) {
-      throw Object.assign(new Error('Codigo incorrecto'), { statusCode: 401 });
+    const valido = authenticator.check(parsed.codigo, info.secret);
+    if (!valido) {
+      throw Object.assign(new Error('Codigo incorrecto, intenta de nuevo'), { statusCode: 401 });
     }
 
     const user = await this.userRepo.findById(payload.sub);
@@ -190,7 +190,7 @@ export class AuthService {
   }
 
   async generar2FA(userId: string, email: string) {
-    const secret = generateSecret();
+    const secret = authenticator.generateSecret();
     await this.userRepo.guardarSecretoTotp(userId, secret);
 
     return {
@@ -206,9 +206,9 @@ export class AuthService {
       throw Object.assign(new Error('Primero genera el codigo con /auth/2fa/generar'), { statusCode: 400 });
     }
 
-    const resultado = await verify({ secret: info.secret, token: parsed.codigo });
-    if (!resultado.valid) {
-      throw Object.assign(new Error('Codigo incorrecto, intenta de nuevo'), { statusCode: 401 });
+    const valido = authenticator.check(parsed.codigo, info.secret);
+    if (!valido) {
+      throw Object.assign(new Error('Codigo incorrecto'), { statusCode: 401 });
     }
 
     await this.userRepo.activarTotp(userId);
