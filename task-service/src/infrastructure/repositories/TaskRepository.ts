@@ -161,6 +161,38 @@ export class TaskRepository {
     return rowCount ?? 0;
   }
 
+   async registrarHistorialFijas(): Promise<number> {
+    const { rowCount } = await pool.query(
+      `INSERT INTO historial_fijas_diario (tarea_id, usuario_id, titulo, fecha, estado_final)
+       SELECT id, usuario_id, titulo, CURRENT_DATE,
+         CASE estado
+           WHEN 'completed' THEN 'completada'
+           WHEN 'rejected' THEN 'rechazada'
+           ELSE 'no_completada'
+         END
+       FROM tareas
+       WHERE tipo = 'fija'
+       ON CONFLICT (tarea_id, fecha) DO NOTHING`,
+    );
+    return rowCount ?? 0;
+  }
+
+  async getHistorialFijas(usuarioId: string) {
+    const { rows } = await pool.query(
+      `SELECT tarea_id, titulo, fecha, estado_final
+       FROM historial_fijas_diario
+       WHERE usuario_id = $1
+       ORDER BY fecha DESC, titulo`,
+      [usuarioId],
+    );
+    return rows.map((r) => ({
+      tareaId: r.tarea_id,
+      titulo: r.titulo,
+      fecha: r.fecha,
+      estadoFinal: r.estado_final,
+    }));
+  }
+
   async findPorVencerEn(minutos: number): Promise<{ id: string; usuarioId: string; titulo: string }[]> {
     const { rows } = await pool.query(
       `SELECT id, usuario_id, titulo FROM tareas

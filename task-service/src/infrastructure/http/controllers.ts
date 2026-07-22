@@ -80,6 +80,15 @@ export function createTaskController(taskService: TaskService) {
       }
     },
 
+    historialFijas: async (req: Request, res: Response) => {
+      try {
+        const result = await taskService.getHistorialFijas(req.user!.id);
+        res.status(200).json({ historial: result });
+      } catch (err: any) {
+        handleError(res, err, 'Error al obtener el historial de fijas');
+      }
+    },
+
     suscribirPush: async (req: Request, res: Response) => {
       try {
         const result = await taskService.suscribirPush(req.user!.id, req.body);

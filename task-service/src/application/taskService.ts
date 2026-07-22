@@ -191,6 +191,8 @@ export class TaskService {
   }
   
   async processDailyFixedTasks(): Promise<void> {
+    const registradas = await this.repo.registrarHistorialFijas();
+
     const noHechas = await this.repo.contarFijasPendientesPorUsuario();
     for (const u of noHechas) {
       if (this.gamificationClient) {
@@ -204,7 +206,7 @@ export class TaskService {
 
     const reiniciadas = await this.repo.reiniciarFijas();
     console.log(
-      `[TaskCron] Ciclo diario de fijas: ${noHechas.length} usuarios con incumplidas, ${reiniciadas} tareas reiniciadas`,
+      `[TaskCron] Ciclo diario de fijas: ${registradas} registros de historial, ${noHechas.length} usuarios con incumplidas, ${reiniciadas} tareas reiniciadas`,
     );
   }
 
@@ -222,6 +224,10 @@ export class TaskService {
 
   async getReporteEvidencias(usuarioId: string) {
     return this.repo.getReporteEvidencias(usuarioId);
+  }
+
+  async getHistorialFijas(usuarioId: string) {
+    return this.repo.getHistorialFijas(usuarioId);
   }
 
   async marcarNotificada(tareaId: string, tipo: string) {
