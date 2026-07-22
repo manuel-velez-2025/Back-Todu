@@ -83,9 +83,22 @@ export class TaskRepository {
          descripcion = COALESCE($3, descripcion),
          xp_valor = COALESCE($4, xp_valor),
          dificultad = COALESCE($5, dificultad),
-         fecha_vencimiento = COALESCE($6, fecha_vencimiento)
+         fecha_vencimiento = COALESCE($6, fecha_vencimiento),
+         tipo = COALESCE($7, tipo),
+         dias_semana = COALESCE($8, dias_semana),
+         hora_recordatorio = COALESCE($9, hora_recordatorio)
        WHERE id = $1 RETURNING *`,
-      [id, data.titulo ?? null, data.descripcion ?? null, data.xpValor ?? null, data.dificultad ?? null, data.fechaVencimiento ?? null],
+      [
+        id,
+        data.titulo ?? null,
+        data.descripcion ?? null,
+        data.xpValor ?? null,
+        data.dificultad ?? null,
+        data.fechaVencimiento ?? null,
+        data.tipo ?? null,
+        data.diasSemana ?? null,
+        data.horaRecordatorio ?? null,
+      ],
     );
     return rowToTarea(rows[0]);
   }
