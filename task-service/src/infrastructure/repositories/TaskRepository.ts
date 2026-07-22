@@ -3,8 +3,15 @@ import { Tarea, CreateTaskDTO } from '../../domain/Tarea';
 
 
 function isoDiaDeHoy(): number {
-  const dow = new Date().getDay();
-  return dow === 0 ? 7 : dow; 
+  const diaAbrev = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Mexico_City',
+    weekday: 'short',
+  }).format(new Date());
+
+  const mapa: Record<string, number> = {
+    Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7,
+  };
+  return mapa[diaAbrev];
 }
 
 function rowToTarea(row: any): Tarea {
@@ -142,7 +149,7 @@ export class TaskRepository {
        FROM tareas
        WHERE tipo = 'fija' AND estado = 'pending'
          AND (dias_semana IS NULL OR
-              (EXTRACT(ISODOW FROM NOW() - INTERVAL '1 day'))::int = ANY(dias_semana))
+              (EXTRACT(ISODOW FROM ((NOW() - INTERVAL '1 day') AT TIME ZONE 'America/Mexico_City')))::int = ANY(dias_semana)
        GROUP BY usuario_id`,
     );
     return rows.map((r) => ({ usuarioId: r.usuario_id, cantidad: r.cantidad }));
@@ -214,8 +221,8 @@ export class TaskRepository {
       `SELECT id, usuario_id, titulo FROM tareas
        WHERE tipo = 'fija' AND estado = 'pending'
          AND hora_recordatorio IS NOT NULL
-         AND hora_recordatorio BETWEEN (NOW()::time) AND (NOW()::time + INTERVAL '1 minute')
-         AND (dias_semana IS NULL OR (EXTRACT(ISODOW FROM NOW()))::int = ANY(dias_semana))
+         hora_recordatorio BETWEEN ((NOW() AT TIME ZONE 'America/Mexico_City')::time) AND ((NOW() AT TIME ZONE 'America/Mexico_City')::time + INTERVAL '1 minute')
+         AND (EXTRACT(ISODOW FROM (NOW() AT TIME ZONE 'America/Mexico_City')))::int = ANY(dias_semana)
          AND NOT EXISTS (
            SELECT 1 FROM recordatorios_enviados r
            WHERE r.tarea_id = tareas.id AND r.fecha = CURRENT_DATE
