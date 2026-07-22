@@ -37,6 +37,10 @@ const trialController = createTrialController(trialService);
 app.post('/auth/register', authController.register);
 app.post('/auth/login', authController.login);
 app.post('/auth/google', authController.googleAuth);
+app.post('/auth/2fa/verificar', authController.verificar2FA);
+app.post('/auth/2fa/generar', authMiddleware, authController.generar2FA);
+app.post('/auth/2fa/activar', authMiddleware, authController.activar2FA);
+app.post('/auth/2fa/desactivar', authMiddleware, authController.desactivar2FA);
 
 app.get('/perfil', authMiddleware, profileController.getProfile);
 app.put('/perfil/username', authMiddleware, profileController.updateUsername);
@@ -44,7 +48,6 @@ app.put('/perfil/password', authMiddleware, profileController.changePassword);
 app.delete('/perfil', authMiddleware, profileController.deleteAccount);
 
 app.get('/inventario', authMiddleware, inventoryController.getInventario);
-//p.post('/inventario/agregar', authMiddleware, inventoryController.agregar); Borrar despues la ruta 
 app.post('/inventario/equipar', authMiddleware, inventoryController.equipar);
 app.post('/inventario/desequipar', authMiddleware, inventoryController.desequipar);
 app.get('/inventario/catalogo', authMiddleware, inventoryController.catalogo);

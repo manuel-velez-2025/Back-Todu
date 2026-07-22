@@ -25,7 +25,7 @@ export class UserRepository {
 
   async findByEmailConPassword(email: string): Promise<User | null> {
     const { rows } = await pool.query(
-      'SELECT id, username, email, password_hash, auth_provider, google_id, fecha_nacimiento, created_at FROM usuarios WHERE email = $1',
+      'SELECT id, username, email, password_hash, auth_provider, google_id, fecha_nacimiento, created_at, totp_habilitado FROM usuarios WHERE email = $1',
       [email],
     );
     return rows[0] ? rowToUser(rows[0]) : null;
@@ -34,6 +34,29 @@ export class UserRepository {
   async findById(id: string): Promise<User | null> {
     const { rows } = await pool.query('SELECT * FROM usuarios WHERE id = $1', [id]);
     return rows[0] ? rowToUser(rows[0]) : null;
+  }
+
+  async guardarSecretoTotp(userId: string, secret: string): Promise<void> {
+    await pool.query('UPDATE usuarios SET totp_secret = $2 WHERE id = $1', [userId, secret]);
+  }
+
+  async activarTotp(userId: string): Promise<void> {
+    await pool.query('UPDATE usuarios SET totp_habilitado = true WHERE id = $1', [userId]);
+  }
+
+  async desactivarTotp(userId: string): Promise<void> {
+    await pool.query(
+      'UPDATE usuarios SET totp_habilitado = false, totp_secret = NULL WHERE id = $1',
+      [userId],
+    );
+  }
+
+  async getTotpInfo(userId: string): Promise<{ secret: string | null; habilitado: boolean } | null> {
+    const { rows } = await pool.query(
+      'SELECT totp_secret, totp_habilitado FROM usuarios WHERE id = $1',
+      [userId],
+    );
+    return rows[0] ? { secret: rows[0].totp_secret, habilitado: rows[0].totp_habilitado } : null;
   }
 
   async findByUsername(username: string): Promise<User | null> {

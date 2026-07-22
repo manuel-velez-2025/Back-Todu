@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
+import { generateSecret, verify } from 'otplib';
+import QRCode from 'qrcode';
 import { UserRepository } from '../infrastructure/repositories/UserRepository';
 import { IAuthProvider } from '../domain/interfaces/IAuthProvider';
 import { IHashProvider } from '../domain/interfaces/IHashProvider';
@@ -21,6 +23,15 @@ export const googleAuthSchema = z.object({
   token: z.string().min(1, 'El token de Google es requerido'),
 });
 
+export const verificar2FASchema = z.object({
+  preAuthToken: z.string().min(1),
+  codigo: z.string().length(6, 'El codigo debe tener 6 digitos'),
+});
+
+export const activar2FASchema = z.object({
+  codigo: z.string().length(6, 'El codigo debe tener 6 digitos'),
+});
+
 interface AuthResult {
   token: string;
   user: {
@@ -34,6 +45,11 @@ interface AuthResult {
     xpActual: number;
     createdAt: Date;
   };
+}
+
+interface Requiere2FAResult {
+  requiere2FA: true;
+  preAuthToken: string;
 }
 
 function toAuthUser(user: User): AuthResult['user'] {
@@ -55,6 +71,14 @@ function generateToken(user: User): string {
     { sub: user.id, email: user.email },
     process.env.JWT_SECRET || 'dev-secret',
     { expiresIn: '30d' },
+  );
+}
+
+function generarPreAuthToken(userId: string): string {
+  return jwt.sign(
+    { sub: userId, pre2fa: true },
+    process.env.JWT_SECRET || 'dev-secret',
+    { expiresIn: '5m' },
   );
 }
 
@@ -85,7 +109,7 @@ export class AuthService {
     return { token: generateToken(user), user: toAuthUser(user) };
   }
 
-  async loginWithEmail(dto: z.infer<typeof loginSchema>): Promise<AuthResult> {
+  async loginWithEmail(dto: z.infer<typeof loginSchema>): Promise<AuthResult | Requiere2FAResult> {
     const parsed = loginSchema.parse(dto);
 
     const user = await this.userRepo.findByEmailConPassword(parsed.email);
@@ -96,6 +120,10 @@ export class AuthService {
     const ok = await this.hashProvider.compare(parsed.password, user.passwordHash);
     if (!ok) {
       throw Object.assign(new Error('Credenciales invalidas'), { statusCode: 401 });
+    }
+
+    if (user.totpHabilitado) {
+      return { requiere2FA: true, preAuthToken: generarPreAuthToken(user.id) };
     }
 
     return { token: generateToken(user), user: toAuthUser(user) };
@@ -128,5 +156,67 @@ export class AuthService {
     }
 
     return { token: generateToken(user), user: toAuthUser(user) };
+  }
+
+  async verificar2FA(dto: unknown): Promise<AuthResult> {
+    const parsed = verificar2FASchema.parse(dto);
+
+    let payload: any;
+    try {
+      payload = jwt.verify(parsed.preAuthToken, process.env.JWT_SECRET || 'dev-secret');
+    } catch {
+      throw Object.assign(new Error('El token de verificacion expiro o es invalido'), { statusCode: 401 });
+    }
+    if (!payload.pre2fa) {
+      throw Object.assign(new Error('Token invalido para esta operacion'), { statusCode: 401 });
+    }
+
+    const info = await this.userRepo.getTotpInfo(payload.sub);
+    if (!info || !info.habilitado || !info.secret) {
+      throw Object.assign(new Error('2FA no esta habilitado para este usuario'), { statusCode: 400 });
+    }
+
+    const resultado = await verify({ secret: info.secret, token: parsed.codigo });
+    if (!resultado.valid) {
+      throw Object.assign(new Error('Codigo incorrecto'), { statusCode: 401 });
+    }
+
+    const user = await this.userRepo.findById(payload.sub);
+    if (!user) {
+      throw Object.assign(new Error('Usuario no encontrado'), { statusCode: 404 });
+    }
+
+    return { token: generateToken(user), user: toAuthUser(user) };
+  }
+
+  async generar2FA(userId: string, email: string) {
+    const secret = generateSecret();
+    await this.userRepo.guardarSecretoTotp(userId, secret);
+
+    return {
+      secret,
+      instrucciones: `Abre tu app de autenticacion (Google Authenticator, Authy), agrega una cuenta nueva de forma manual con el nombre "Todu (${email})" y pega este codigo: ${secret}`,
+    };
+  }
+
+  async activar2FA(userId: string, dto: unknown) {
+    const parsed = activar2FASchema.parse(dto);
+    const info = await this.userRepo.getTotpInfo(userId);
+    if (!info || !info.secret) {
+      throw Object.assign(new Error('Primero genera el codigo con /auth/2fa/generar'), { statusCode: 400 });
+    }
+
+    const resultado = await verify({ secret: info.secret, token: parsed.codigo });
+    if (!resultado.valid) {
+      throw Object.assign(new Error('Codigo incorrecto, intenta de nuevo'), { statusCode: 401 });
+    }
+
+    await this.userRepo.activarTotp(userId);
+    return { habilitado: true };
+  }
+
+  async desactivar2FA(userId: string) {
+    await this.userRepo.desactivarTotp(userId);
+    return { habilitado: false };
   }
 }

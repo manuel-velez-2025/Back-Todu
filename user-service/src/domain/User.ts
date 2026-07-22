@@ -8,6 +8,7 @@ export interface User {
   fechaNacimiento: string;
   xpTotal?: number; 
   createdAt: Date;
+  totpHabilitado?: boolean;
 }
 
 export interface InventoryItem {

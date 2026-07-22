@@ -45,6 +45,42 @@ export function createAuthController(authService: AuthService) {
         handleError(res, err, 'Error al autenticar con Google');
       }
     },
+
+    generar2FA: async (req: Request, res: Response) => {
+      try {
+        const result = await authService.generar2FA(req.user!.id, req.user!.email);
+        res.status(200).json(result);
+      } catch (err: any) {
+        handleError(res, err, 'Error al generar 2FA');
+      }
+    },
+
+    activar2FA: async (req: Request, res: Response) => {
+      try {
+        const result = await authService.activar2FA(req.user!.id, req.body);
+        res.status(200).json(result);
+      } catch (err: any) {
+        handleError(res, err, 'Error al activar 2FA');
+      }
+    },
+
+    desactivar2FA: async (req: Request, res: Response) => {
+      try {
+        const result = await authService.desactivar2FA(req.user!.id);
+        res.status(200).json(result);
+      } catch (err: any) {
+        handleError(res, err, 'Error al desactivar 2FA');
+      }
+    },
+
+    verificar2FA: async (req: Request, res: Response) => {
+      try {
+        const result = await authService.verificar2FA(req.body);
+        res.status(200).json(result);
+      } catch (err: any) {
+        handleError(res, err, 'Error al verificar 2FA');
+      }
+    },
   };
 }
 
